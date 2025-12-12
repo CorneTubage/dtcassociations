@@ -1,0 +1,31 @@
+{
+  "name": "dtcassociations",
+  "version": "1.0.0",
+  "description": "Gestion des associations pour Nextcloud",
+  "private": true,
+  "scripts": {
+    "build": "vite build",
+    "watch": "vite build --watch",
+    "lint": "eslint src",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@nextcloud/axios": "^2.1.0",
+    "@nextcloud/dialogs": "^3.2.0",
+    "@nextcloud/l10n": "^1.6.0",
+    "@nextcloud/paths": "^2.1.0",
+    "@nextcloud/router": "^2.1.0",
+    "@nextcloud/vue": "^7.12.0",
+    "vue": "^2.7.14"
+  },
+  "devDependencies": {
+    "@linusborg/vue-simple-portal": "^0.1.5",
+    "@vitejs/plugin-vue2": "^2.2.0",
+    "sass": "^1.62.1",
+    "vite": "^4.3.5"
+  },
+  "engines": {
+    "node": "^16.0.0",
+    "npm": "^7.0.0"
+  }
+}

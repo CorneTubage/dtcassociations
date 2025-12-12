@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>dtcassociations</id>
+	<name>DTCAssociations</name>
+	<summary>Custom roles and Group Folder ACLs.</summary>
+	<description>Manages student associations, custom roles, and Group Folder ACLs.</description>
+	<version>1.0.8</version>
+	<licence>agpl</licence>
+	<author mail="Noe.Arhan.Etu@univ-lemans.fr" homepage="">Noé ARHAN</author>
+	<namespace>DTCAssociations</namespace>
+	<category>organization</category>
+	<bugs>http://jsp.com</bugs>
+	<dependencies>
+		<nextcloud min-version="30" max-version="32"/>
+	</dependencies>
+	<navigations>
+		<navigation>
+			<id>dtcassociations</id>
+			<name>DTCAssociations</name>
+			<route>dtcassociations.page.index</route>
+			<icon>app.svg</icon>
+			<type>link</type>
+		</navigation>
+	</navigations>
+</info>
