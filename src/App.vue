@@ -20,7 +20,6 @@
     </NcAppNavigation>
 
     <NcAppContent>
-      <!-- VUE LISTE DES ASSOCIATIONS -->
       <div v-if="!selectedAssociation" class="dtc-container">
         <h2>{{ t('dtcassociations', 'Gestion des Associations') }}</h2>
 
@@ -67,7 +66,6 @@
         </ul>
       </div>
 
-      <!-- VUE DÉTAIL / MEMBRES -->
       <div v-else class="dtc-container">
         <div class="header-actions">
            <NcButton @click="selectedAssociation = null" type="tertiary" icon="icon-arrow-left-active">
@@ -107,13 +105,11 @@
           <li v-for="member in members" :key="member.id" class="association-item">
             <span class="icon-user icon"></span>
             
-            <!-- AFFICHAGE NORMAL -->
             <div class="info" v-if="editingMemberId !== member.user_id">
               <span class="name">{{ member.user_id }}</span>
               <span class="role-badge">{{ translateRole(member.role) }}</span>
             </div>
 
-            <!-- MODE ÉDITION EN LIGNE -->
             <div class="info edit-mode" style="justify-content: space-between;" v-else>
               <div class="edit-mode_user">
               <span class="name">{{ member.user_id }}</span>
@@ -149,7 +145,6 @@
         </ul>
       </div>
 
-      <!-- 1. MODALE SUPPRESSION ASSO -->
       <NcModal v-if="showDeleteModal" @close="closeDeleteModal" title="Suppression définitive" size="small">
         <div class="modal-content">
           <p><strong>Attention :</strong> Vous êtes sur le point de supprimer l'association <em>{{ associationToDelete?.name }}</em>.</p>
@@ -161,7 +156,6 @@
           </div>
       </NcModal>
 
-      <!-- 2. MODALE RENOMMER ASSO -->
       <NcModal v-if="showRenameModal" @close="closeRenameModal" title="Renommer l'association" size="small">
         <div class="modal-content">
           <p>Entrez le nouveau nom pour l'association :</p>
@@ -180,7 +174,6 @@
         </div>
       </NcModal>
 
-      <!-- 3. MODALE RETIRER MEMBRE -->
       <NcModal v-if="showRemoveMemberModal" @close="closeRemoveMemberModal" title="Retirer un membre" size="small">
         <div class="modal-content">
           <p>Voulez-vous vraiment retirer <strong>{{ memberToRemove?.user_id }}</strong> de cette association ?</p>

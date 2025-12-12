@@ -8,7 +8,6 @@ use OCP\AppFramework\Db\Entity;
 
 class Association extends Entity implements \JsonSerializable
 {
-
     protected string $name = '';
     protected string $code = '';
 

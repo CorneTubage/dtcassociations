@@ -56,16 +56,13 @@ class AssociationService
             $association = $this->associationMapper->find($id);
             $oldName = $association->getName();
 
-            // 1. Mise à jour du nom en base
             $association->setName($name);
             $updated = $this->associationMapper->update($association);
 
-            // 2. Renommage du dossier GroupFolder
             if ($oldName !== $name) {
                 try {
                     $this->gfService->renameFolder($oldName, $name);
                 } catch (\Throwable $e) {
-                    // Log mais continue (non bloquant)
                 }
             }
 
@@ -86,20 +83,21 @@ class AssociationService
             /** @var Association $association */
             $association = $this->associationMapper->find($id);
 
-            // Suppression du dossier et groupe
+            // Suppression du dossier et groupe Nextcloud
             try {
                 $this->gfService->deleteStructure($association->getName());
             } catch (\Throwable $e) {
-                // Log mais continue
             }
 
+            // Suppression des membres dans la BDD
+            $this->memberMapper->deleteByGroup($association->getCode());
+
+            // Suppression de l'association en BDD
             $this->associationMapper->delete($association);
         } catch (DoesNotExistException $e) {
             throw new Exception("Association introuvable.");
         }
     }
-
-    // --- MEMBRES ---
 
     public function addMember(int $associationId, string $userId, string $role): AssociationMember
     {

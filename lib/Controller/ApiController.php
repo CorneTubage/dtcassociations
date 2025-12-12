@@ -12,7 +12,6 @@ use OCP\IRequest;
 
 class ApiController extends Controller
 {
-
 	private AssociationService $service;
 
 	public function __construct(
@@ -70,8 +69,6 @@ class ApiController extends Controller
 			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_NOT_FOUND);
 		}
 	}
-
-    // --- MEMBRES ---
 
 	/** @NoAdminRequired */
 	public function getMembers(int $id): DataResponse

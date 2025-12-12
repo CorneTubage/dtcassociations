@@ -8,8 +8,6 @@ use OCP\AppFramework\Db\Entity;
 
 class AssociationMember extends Entity
 {
-
-    // On initialise avec une chaîne vide pour éviter l'erreur "uninitialized"
     protected string $userId = '';
     protected string $groupId = '';
     protected string $role = '';

@@ -15,12 +15,14 @@ use OCP\AppFramework\Http\TemplateResponse;
 /**
  * @psalm-suppress UnusedClass
  */
-class PageController extends Controller {
+class PageController extends Controller
+{
 	#[NoCSRFRequired]
 	#[NoAdminRequired]
 	#[OpenAPI(OpenAPI::SCOPE_IGNORE)]
 	#[FrontpageRoute(verb: 'GET', url: '/')]
-	public function index(): TemplateResponse {
+	public function index(): TemplateResponse
+	{
 		return new TemplateResponse(
 			Application::APP_ID,
 			'index',

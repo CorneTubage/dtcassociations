@@ -9,6 +9,7 @@ use OCP\IUserManager;
 use OCP\Files\IRootFolder;
 use OCP\Files\Folder;
 use OCP\Constants;
+use OCP\ILogger;
 use OCA\GroupFolders\Folder\FolderManager;
 use OCA\GroupFolders\ACL\RuleManager;
 use OCA\GroupFolders\ACL\Rule;
@@ -22,6 +23,7 @@ class GroupFolderService
     private FolderManager $folderManager;
     private RuleManager $ruleManager;
     private UserMappingManager $mappingManager;
+    private ILogger $logger;
 
     public function __construct(
         IGroupManager $groupManager,
@@ -29,7 +31,8 @@ class GroupFolderService
         IRootFolder $rootFolder,
         FolderManager $folderManager,
         RuleManager $ruleManager,
-        UserMappingManager $mappingManager
+        UserMappingManager $mappingManager,
+        ILogger $logger
     ) {
         $this->groupManager = $groupManager;
         $this->userManager = $userManager;
@@ -37,20 +40,24 @@ class GroupFolderService
         $this->folderManager = $folderManager;
         $this->ruleManager = $ruleManager;
         $this->mappingManager = $mappingManager;
+        $this->logger = $logger;
     }
 
-    private function log($message): void
+    private function log($message, $level = 'info'): void
     {
-        $timestamp = date('Y-m-d H:i:s');
-        $msg = "[$timestamp] $message\n";
-        $relativePath = dirname(__DIR__, 4) . '/data/dtc_debug.log';
-        if (!@file_put_contents($relativePath, $msg, FILE_APPEND)) {
-            @file_put_contents(sys_get_temp_dir() . '/dtc_debug.log', "FALLBACK: $msg", FILE_APPEND);
+        /** @var ILogger $this */
+        $context = ['app' => 'dtcassociations'];
+        if ($level === 'error') {
+            $this->logger->error($message, $context);
+        } else {
+            $this->logger->info($message, $context);
         }
     }
 
     public function ensureAssociationStructure(string $assoName): int
     {
+        $this->log("Checking structure for $assoName");
+
         if (!$this->groupManager->groupExists($assoName)) {
             $this->groupManager->createGroup($assoName);
         }
@@ -68,13 +75,12 @@ class GroupFolderService
 
         if ($folderId === -1) {
             $folderId = $this->folderManager->createFolder($assoName);
+            $this->log("Created Group Folder $assoName (ID: $folderId)");
         }
 
         try {
             $this->folderManager->addApplicableGroup($folderId, $assoName);
-            if (method_exists($this->folderManager, 'setGroupPermissions')) {
-                $this->folderManager->setGroupPermissions($folderId, $assoName, Constants::PERMISSION_ALL);
-            }
+            $this->folderManager->setGroupPermissions($folderId, $assoName, Constants::PERMISSION_ALL);
         } catch (\Throwable $e) {
         }
 
@@ -94,6 +100,7 @@ class GroupFolderService
             $userFolder = $this->rootFolder->getUserFolder('admin');
             /** @var Folder $mountPoint */
             $mountPoint = $userFolder->get($assoName);
+
             foreach (['archive', 'officiel'] as $dir) {
                 if (!$mountPoint->nodeExists($dir)) $mountPoint->newFolder($dir);
             }
@@ -104,52 +111,38 @@ class GroupFolderService
                 if (!$officiel->nodeExists($sub)) $officiel->newFolder($sub);
             }
         } catch (\Throwable $e) {
-            $this->log("Error creating subfolders: " . $e->getMessage());
+            $this->log("Error creating subfolders: " . $e->getMessage(), 'error');
         }
     }
 
-    // --- CORRECTION SUPPRESSION ---
     public function deleteStructure(string $assoName): void
     {
         $this->log("Deleting structure for $assoName");
 
-        // Supprimer le groupe Nextcloud
         if ($this->groupManager->groupExists($assoName)) {
             $this->groupManager->get($assoName)->delete();
         }
 
-        // Supprimer le Group Folder
         $allFolders = $this->folderManager->getAllFolders();
         foreach ($allFolders as $id => $folder) {
             $name = is_string($folder) ? $folder : $folder->mountPoint;
             if ($name === $assoName) {
-                // CORRECTION : Utilisation de removeFolder (API correcte)
-                if (method_exists($this->folderManager, 'removeFolder')) {
-                    $this->folderManager->removeFolder($id);
-                    $this->log("Deleted Group Folder ID $id using removeFolder");
-                } else {
-                    $this->log("CRITICAL: No delete method found on FolderManager");
-                }
+                $this->folderManager->removeFolder($id);
+                $this->log("Deleted Group Folder ID $id");
                 break;
             }
         }
     }
 
-    // --- CORRECTION RENOMMAGE ---
     public function renameFolder(string $oldName, string $newName): void
     {
         $allFolders = $this->folderManager->getAllFolders();
-        $this->log("Attempting rename from '$oldName' to '$newName'");
+        $this->log("Renaming folder from '$oldName' to '$newName'");
 
         foreach ($allFolders as $id => $folder) {
             $name = is_string($folder) ? $folder : $folder->mountPoint;
             if ($name === $oldName) {
-                if (method_exists($this->folderManager, 'renameFolder')) {
-                    $this->folderManager->renameFolder($id, $newName);
-                    $this->log("Renamed Group Folder ID $id (renameFolder)");
-                } else {
-                    $this->log("CRITICAL: No rename method found on FolderManager");
-                }
+                $this->folderManager->renameFolder($id, $newName);
                 break;
             }
         }
@@ -175,26 +168,26 @@ class GroupFolderService
 
     public function applyRolePermissions(int $folderId, string $userId, string $role): void
     {
+        $this->log("Applying permissions: User=$userId, Role=$role, FolderID=$folderId");
+
         $allFolders = $this->folderManager->getAllFolders();
         $folderObject = $allFolders[$folderId];
         $assoName = is_string($folderObject) ? $folderObject : $folderObject->mountPoint;
 
         $this->addUserToGroup($userId, $assoName);
 
-        /** @var Folder $this */
         try {
-            if (method_exists($this->folderManager, 'setFolderACL')) {
-                $this->folderManager->setFolderACL($folderId, true);
-            } elseif (method_exists($this->folderManager, 'setAcl')) {
-                $this->folderManager->setAcl($folderId, 1);
-            }
+            $this->folderManager->setFolderACL($folderId, true);
         } catch (\Throwable $e) {
         }
 
         $userObj = $this->userManager->get($userId);
         $allMappings = $this->mappingManager->getMappingsForUser($userObj);
 
-        if (empty($allMappings)) return;
+        if (empty($allMappings)) {
+            $this->log("No mappings found for user $userId", 'error');
+            return;
+        }
 
         $mapping = null;
         foreach ($allMappings as $m) {
@@ -209,9 +202,9 @@ class GroupFolderService
         $userFolder = $this->rootFolder->getUserFolder('admin');
         $rootNode = $userFolder->get($assoName);
 
-        /** @var ACL $this */
         $this->setRule($mapping, $rootNode->getId(), Constants::PERMISSION_ALL);
 
+        /** @var Folder $rootNode */
         if ($rootNode->nodeExists('archive')) {
             $this->setRule($mapping, $rootNode->get('archive')->getId(), Constants::PERMISSION_READ);
         }
@@ -220,6 +213,7 @@ class GroupFolderService
             $officiel = $rootNode->get('officiel');
             $this->setRule($mapping, $officiel->getId(), Constants::PERMISSION_ALL);
 
+            /** @var Folder $officiel */
             if ($officiel->nodeExists('General')) {
                 $this->setRule($mapping, $officiel->get('General')->getId(), Constants::PERMISSION_ALL);
             }
@@ -228,8 +222,10 @@ class GroupFolderService
                 $treso = $officiel->get('Tresorie');
                 if ($role === 'president' || $role === 'treasurer' || $role === 'tresorier') {
                     $this->setRule($mapping, $treso->getId(), Constants::PERMISSION_ALL);
+                    $this->log("ACL: Tresorie ALLOWED");
                 } else {
                     $this->setRule($mapping, $treso->getId(), 0);
+                    $this->log("ACL: Tresorie BLOCKED");
                 }
             }
         }
@@ -247,6 +243,7 @@ class GroupFolderService
             $add = new Rule($mapping, $fileId, Constants::PERMISSION_ALL, $permissions);
             $this->ruleManager->saveRule($add);
         } catch (\Throwable $e) {
+            $this->log("Error saving rule: " . $e->getMessage(), 'error');
         }
     }
 }
