@@ -16,20 +16,17 @@ class AssociationService
 
     private AssociationMapper $associationMapper;
     private AssociationMemberMapper $memberMapper;
-    // Ajout du service GroupFolder
     private GroupFolderService $gfService;
 
     public function __construct(
         AssociationMapper $associationMapper,
         AssociationMemberMapper $memberMapper,
-        GroupFolderService $gfService // Injection automatique
+        GroupFolderService $gfService
     ) {
         $this->associationMapper = $associationMapper;
         $this->memberMapper = $memberMapper;
         $this->gfService = $gfService;
     }
-
-    // --- ASSOCIATIONS ---
 
     public function createAssociation(string $name, string $code): Association
     {
@@ -37,22 +34,16 @@ class AssociationService
             $this->associationMapper->findByCode($code);
             throw new Exception("Une association avec le code '$code' existe déjà.");
         } catch (DoesNotExistException $e) {
-            // OK
         }
 
-        // 1. Création en base de données
         $association = new Association();
         $association->setName($name);
         $association->setCode($code);
         $entity = $this->associationMapper->insert($association);
 
-        // 2. Création de la structure GroupFolder (Appel à ton service)
         try {
-            // On utilise le NOM pour le dossier (ex: "Club Photo")
             $this->gfService->ensureAssociationStructure($name);
         } catch (\Throwable $e) {
-            // On loggue l'erreur mais on ne bloque pas la création de l'asso en base
-            // (Tu peux voir les erreurs dans ton fichier dtc_debug.log défini dans GroupFolderService)
         }
 
         return $entity;
@@ -63,9 +54,22 @@ class AssociationService
         try {
             /** @var Association $association */
             $association = $this->associationMapper->find($id);
+            $oldName = $association->getName();
+
+            // 1. Mise à jour du nom en base
             $association->setName($name);
-            // Note: Idéalement, il faudrait aussi renommer le GroupFolder ici si le nom change
-            return $this->associationMapper->update($association);
+            $updated = $this->associationMapper->update($association);
+
+            // 2. Renommage du dossier GroupFolder
+            if ($oldName !== $name) {
+                try {
+                    $this->gfService->renameFolder($oldName, $name);
+                } catch (\Throwable $e) {
+                    // Log mais continue (non bloquant)
+                }
+            }
+
+            return $updated;
         } catch (DoesNotExistException $e) {
             throw new Exception("Association introuvable.");
         }
@@ -79,9 +83,16 @@ class AssociationService
     public function deleteAssociation(int $id): void
     {
         try {
+            /** @var Association $association */
             $association = $this->associationMapper->find($id);
-            // Pour l'instant on supprime seulement de la DB pour ne pas perdre de données par erreur
-            // Si tu veux supprimer le dossier aussi, tu devras ajouter une méthode deleteStructure dans GroupFolderService
+
+            // Suppression du dossier et groupe
+            try {
+                $this->gfService->deleteStructure($association->getName());
+            } catch (\Throwable $e) {
+                // Log mais continue
+            }
+
             $this->associationMapper->delete($association);
         } catch (DoesNotExistException $e) {
             throw new Exception("Association introuvable.");
@@ -102,18 +113,12 @@ class AssociationService
         $code = $association->getCode();
         $assoName = $association->getName();
 
-        // 1. Appliquer les permissions sur le GroupFolder
         try {
-            // On s'assure que le dossier existe et on récupère son ID
             $folderId = $this->gfService->ensureAssociationStructure($assoName);
-
-            // On applique les permissions spécifiques (ACL, accès Trésorerie, etc.)
             $this->gfService->applyRolePermissions($folderId, $userId, $role);
         } catch (\Throwable $e) {
-            // Log erreur dossier, mais on continue pour l'ajout en DB
         }
 
-        // 2. Ajout en base de données (Logiciel existante)
         try {
             $member = $this->memberMapper->getMember($userId, $code);
             $member->setRole($role);
@@ -132,13 +137,14 @@ class AssociationService
         try {
             /** @var Association $association */
             $association = $this->associationMapper->find($associationId);
-            $code = $association->getCode();
+            $assoName = $association->getName();
 
-            // Note: Ton GroupFolderService actuel n'a pas de méthode "removePermissions" explicite.
-            // Les ACLs resteront peut-être actives jusqu'à un nettoyage manuel ou une mise à jour.
-            // Pour faire propre, il faudrait ajouter une méthode removeUserAccess($folderId, $userId) dans GroupFolderService.
+            try {
+                $this->gfService->removeUserFromGroup($userId, $assoName);
+            } catch (\Throwable $e) {
+            }
 
-            $member = $this->memberMapper->getMember($userId, $code);
+            $member = $this->memberMapper->getMember($userId, $association->getCode());
             $this->memberMapper->delete($member);
         } catch (DoesNotExistException $e) {
             throw new Exception("Membre ou association introuvable.");
