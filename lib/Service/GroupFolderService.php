@@ -9,18 +9,18 @@ use OCP\IUserManager;
 use OCP\Files\IRootFolder;
 use OCP\Files\Folder;
 use OCP\Constants;
-use Psr\Log\LoggerInterface; // CORRECTION : Utilisation du standard PSR-3
+use Psr\Log\LoggerInterface;
 use OCP\App\IAppManager;
 
 /**
- * Service pour gérer les Dossiers de Groupe de manière sécurisée.
+ * Service pour gérer les Dossiers de Groupe.
  */
 class GroupFolderService
 {
     private IGroupManager $groupManager;
     private IUserManager $userManager;
     private IRootFolder $rootFolder;
-    private LoggerInterface $logger; // Typage mis à jour
+    private LoggerInterface $logger;
     private IAppManager $appManager;
 
     private $folderManager = null;
@@ -31,7 +31,7 @@ class GroupFolderService
         IGroupManager $groupManager,
         IUserManager $userManager,
         IRootFolder $rootFolder,
-        LoggerInterface $logger, // Injection mise à jour
+        LoggerInterface $logger,
         IAppManager $appManager
     ) {
         $this->groupManager = $groupManager;
@@ -43,17 +43,10 @@ class GroupFolderService
 
     private function log($message, $level = 'info'): void
     {
-        // Adaptation pour PSR-3
-        // On s'assure que le niveau existe (info, error, debug...)
-        if (!method_exists($this->logger, $level)) {
-            $level = 'info';
-        }
+        if (!method_exists($this->logger, $level)) $level = 'info';
         $this->logger->$level("[DTC] " . $message, ['app' => 'dtcassociations']);
     }
 
-    /**
-     * Helper pour récupérer les services GroupFolders dynamiquement
-     */
     private function getService(string $className)
     {
         if (!$this->appManager->isEnabledForUser('groupfolders')) {
@@ -101,7 +94,7 @@ class GroupFolderService
             $this->createSubFolders($assoName);
             return $folderId;
         } catch (\Throwable $e) {
-            $this->log("Error ensures structure: " . $e->getMessage(), 'error');
+            $this->log("Error structure: " . $e->getMessage(), 'error');
             return -1;
         }
     }
@@ -121,7 +114,6 @@ class GroupFolderService
                 if (!$officiel->nodeExists($sub)) $officiel->newFolder($sub);
             }
         } catch (\Throwable $e) {
-            // Ignorer silencieusement si dossier pas prêt
         }
     }
 
@@ -150,26 +142,84 @@ class GroupFolderService
         }
     }
 
+    // --- TACHE 4 : RENOMMAGE COMPLET ---
     public function renameFolder(string $oldName, string $newName): void
     {
         try {
             $fm = $this->getService('OCA\GroupFolders\Folder\FolderManager');
             $allFolders = $fm->getAllFolders();
-            $this->log("Renaming folder from '$oldName' to '$newName'");
+            $this->log("Renaming structure from '$oldName' to '$newName'");
 
             foreach ($allFolders as $id => $folder) {
                 $name = is_string($folder) ? $folder : $folder->mountPoint;
+
                 if ($name === $oldName) {
+                    // 1. Renommer le dossier GroupFolder
                     if (method_exists($fm, 'renameFolder')) {
                         $fm->renameFolder($id, $newName);
                     } elseif (method_exists($fm, 'setFolderName')) {
                         $fm->setFolderName($id, $newName);
                     }
+
+                    // 2. Migration du Groupe Nextcloud
+                    // Comme on ne peut pas renommer un groupe, on crée le nouveau, migre, et supprime l'ancien.
+
+                    if (!$this->groupManager->groupExists($newName)) {
+                        $this->groupManager->createGroup($newName);
+                        $this->log("Created new group '$newName'");
+                    }
+
+                    $newGroup = $this->groupManager->get($newName);
+
+                    if ($this->groupManager->groupExists($oldName)) {
+                        $oldGroup = $this->groupManager->get($oldName);
+                        $users = $oldGroup->getUsers();
+
+                        // Déplacer les utilisateurs
+                        foreach ($users as $user) {
+                            if (!$newGroup->inGroup($user)) {
+                                $newGroup->addUser($user);
+                            }
+                        }
+
+                        // Mettre à jour les permissions du dossier pour le nouveau groupe
+                        $fm->addApplicableGroup($id, $newName);
+                        if (method_exists($fm, 'setGroupPermissions')) {
+                            $fm->setGroupPermissions($id, $newName, Constants::PERMISSION_ALL);
+                        }
+
+                        // Retirer l'ancien groupe du dossier
+                        $fm->removeApplicableGroup($id, $oldName);
+
+                        // Supprimer l'ancien groupe
+                        $oldGroup->delete();
+                        $this->log("Migrated users and deleted old group '$oldName'");
+                    }
+
                     break;
                 }
             }
         } catch (\Throwable $e) {
             $this->log("Error rename: " . $e->getMessage(), 'error');
+        }
+    }
+
+    public function updatePresidentGroupMembership(string $userId, bool $shouldBeInGroup): void
+    {
+        $groupName = 'president';
+        if (!$this->groupManager->groupExists($groupName)) {
+            $this->groupManager->createGroup($groupName);
+        }
+        $group = $this->groupManager->get($groupName);
+        $user = $this->userManager->get($userId);
+
+        if (!$group || !$user) return;
+
+        $isIn = $group->inGroup($user);
+        if ($shouldBeInGroup && !$isIn) {
+            $group->addUser($user);
+        } elseif (!$shouldBeInGroup && $isIn) {
+            $group->removeUser($user);
         }
     }
 

@@ -9,9 +9,11 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 
 class ApiController extends Controller
 {
+
 	private AssociationService $service;
 
 	public function __construct(
@@ -23,7 +25,10 @@ class ApiController extends Controller
 		$this->service = $service;
 	}
 
-	/** @NoAdminRequired */
+	/**
+	 * Récupérer toutes les associations
+	 */
+	#[NoAdminRequired]
 	public function getAssociations(): DataResponse
 	{
 		try {
@@ -37,7 +42,36 @@ class ApiController extends Controller
 		}
 	}
 
-	/** @NoAdminRequired */
+	/**
+	 * Récupérer juste les noms (Light)
+	 */
+	#[NoAdminRequired]
+	public function getAssociationNames(): DataResponse
+	{
+		try {
+			$associations = $this->service->getAllAssociations();
+			$data = array_map(function ($assoc) {
+				return [
+					'id' => $assoc->getId(),
+					'name' => $assoc->getName()
+				];
+			}, $associations);
+			return new DataResponse($data);
+		} catch (\Exception $e) {
+			return new DataResponse([], Http::STATUS_INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	/**
+	 * Récupérer la liste complète (Alias explicite)
+	 */
+	#[NoAdminRequired]
+	public function getAssociationsList(): DataResponse
+	{
+		return $this->getAssociations();
+	}
+
+	#[NoAdminRequired]
 	public function createAssociation(string $name, string $code): DataResponse
 	{
 		try {
@@ -48,7 +82,7 @@ class ApiController extends Controller
 		}
 	}
 
-	/** @NoAdminRequired */
+	#[NoAdminRequired]
 	public function updateAssociation(int $id, string $name): DataResponse
 	{
 		try {
@@ -59,7 +93,7 @@ class ApiController extends Controller
 		}
 	}
 
-	/** @NoAdminRequired */
+	#[NoAdminRequired]
 	public function deleteAssociation(int $id): DataResponse
 	{
 		try {
@@ -70,7 +104,7 @@ class ApiController extends Controller
 		}
 	}
 
-	/** @NoAdminRequired */
+	#[NoAdminRequired]
 	public function getMembers(int $id): DataResponse
 	{
 		try {
@@ -84,7 +118,7 @@ class ApiController extends Controller
 		}
 	}
 
-	/** @NoAdminRequired */
+	#[NoAdminRequired]
 	public function addMember(int $id, string $userId, string $role): DataResponse
 	{
 		try {
@@ -95,7 +129,7 @@ class ApiController extends Controller
 		}
 	}
 
-	/** @NoAdminRequired */
+	#[NoAdminRequired]
 	public function removeMember(int $id, string $userId): DataResponse
 	{
 		try {

@@ -28,6 +28,26 @@ class AssociationService
         $this->gfService = $gfService;
     }
 
+    private function syncPresidentGroup(string $userId): void
+    {
+        try {
+            $memberships = $this->memberMapper->getUserAssociations($userId);
+            $isPresidentSomewhere = false;
+
+            foreach ($memberships as $membership) {
+                if ($membership->getRole() === 'president') {
+                    $isPresidentSomewhere = true;
+                    break;
+                }
+            }
+
+            $this->gfService->updatePresidentGroupMembership($userId, $isPresidentSomewhere);
+        } catch (\Throwable $e) {
+        }
+    }
+
+    // --- ASSOCIATIONS ---
+
     public function createAssociation(string $name, string $code): Association
     {
         try {
@@ -83,21 +103,27 @@ class AssociationService
             /** @var Association $association */
             $association = $this->associationMapper->find($id);
 
-            // Suppression du dossier et groupe Nextcloud
+            $members = $this->memberMapper->getAssociationMembers($association->getCode());
+
             try {
                 $this->gfService->deleteStructure($association->getName());
             } catch (\Throwable $e) {
             }
 
-            // Suppression des membres dans la BDD
             $this->memberMapper->deleteByGroup($association->getCode());
-
-            // Suppression de l'association en BDD
             $this->associationMapper->delete($association);
+
+            foreach ($members as $m) {
+                if ($m->getRole() === 'president') {
+                    $this->syncPresidentGroup($m->getUserId());
+                }
+            }
         } catch (DoesNotExistException $e) {
             throw new Exception("Association introuvable.");
         }
     }
+
+    // --- MEMBRES ---
 
     public function addMember(int $associationId, string $userId, string $role): AssociationMember
     {
@@ -111,23 +137,48 @@ class AssociationService
         $code = $association->getCode();
         $assoName = $association->getName();
 
+        if ($role === 'president') {
+            $currentMembers = $this->memberMapper->getAssociationMembers($code);
+            $presidentCount = 0;
+            $isAlreadyPresident = false;
+
+            foreach ($currentMembers as $m) {
+                if ($m->getRole() === 'president') {
+                    $presidentCount++;
+                    if ($m->getUserId() === $userId) {
+                        $isAlreadyPresident = true;
+                    }
+                }
+            }
+
+            // On bloque si on atteint 2 et que l'utilisateur n'est pas déjà l'un des présidents
+            if ($presidentCount >= 2 && !$isAlreadyPresident) {
+                throw new Exception("Impossible d'ajouter : cette association a déjà 2 présidents.");
+            }
+        }
+
         try {
             $folderId = $this->gfService->ensureAssociationStructure($assoName);
             $this->gfService->applyRolePermissions($folderId, $userId, $role);
         } catch (\Throwable $e) {
         }
 
+        $result = null;
         try {
             $member = $this->memberMapper->getMember($userId, $code);
             $member->setRole($role);
-            return $this->memberMapper->update($member);
+            $result = $this->memberMapper->update($member);
         } catch (DoesNotExistException $e) {
             $member = new AssociationMember();
             $member->setUserId($userId);
             $member->setGroupId($code);
             $member->setRole($role);
-            return $this->memberMapper->insert($member);
+            $result = $this->memberMapper->insert($member);
         }
+
+        $this->syncPresidentGroup($userId);
+
+        return $result;
     }
 
     public function removeMember(int $associationId, string $userId): void
@@ -144,6 +195,8 @@ class AssociationService
 
             $member = $this->memberMapper->getMember($userId, $association->getCode());
             $this->memberMapper->delete($member);
+
+            $this->syncPresidentGroup($userId);
         } catch (DoesNotExistException $e) {
             throw new Exception("Membre ou association introuvable.");
         }

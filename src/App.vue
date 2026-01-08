@@ -394,6 +394,7 @@ export default {
 </script>
 
 <style scoped>
+.app-dtcassociations { margin: 0;}
 .dtc-container { padding: 20px; max-width: 800px; }
 .header-actions { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
 .add-form { display: flex; gap: 10px; margin-bottom: 20px; align-items: flex-start; }
