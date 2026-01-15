@@ -62,7 +62,6 @@ class GroupFolderService
         foreach ($groups as $gid) {
             if (!$this->groupManager->groupExists($gid)) {
                 $this->groupManager->createGroup($gid);
-                $this->log("Groupe global '$gid' créé.");
             }
         }
     }
@@ -78,10 +77,8 @@ class GroupFolderService
         $isIn = $group->inGroup($user);
         if ($shouldBeIn && !$isIn) {
             $group->addUser($user);
-            $this->log("User $userId ajouté au groupe global $groupName");
         } elseif (!$shouldBeIn && $isIn) {
             $group->removeUser($user);
-            $this->log("User $userId retiré du groupe global $groupName");
         }
     }
 
@@ -114,6 +111,7 @@ class GroupFolderService
                 $fm->addApplicableGroup($folderId, $assoName);
                 $fm->addApplicableGroup($folderId, 'admin');
                 $fm->addApplicableGroup($folderId, 'admin_iut');
+
                 if (method_exists($fm, 'setGroupPermissions')) {
                     $fm->setGroupPermissions($folderId, $assoName, Constants::PERMISSION_ALL);
                     $fm->setGroupPermissions($folderId, 'admin_iut', Constants::PERMISSION_ALL);
@@ -123,27 +121,45 @@ class GroupFolderService
 
             $this->createSubFolders($assoName);
             $this->applyAdminIutAcl($folderId, $assoName);
+
             return $folderId;
         } catch (\Throwable $e) {
             $this->log("Error structure: " . $e->getMessage(), 'error');
             return -1;
         }
     }
+
+    /**
+     * Applique les règles ACL spécifiques pour le groupe admin_iut
+     */
     private function applyAdminIutAcl(int $folderId, string $assoName): void
     {
         try {
+            $fm = $this->getService('OCA\GroupFolders\Folder\FolderManager');
             $rm = $this->getService('OCA\GroupFolders\ACL\RuleManager');
             $mm = $this->getService('OCA\GroupFolders\ACL\UserMapping\UserMappingManager');
+
+            if (method_exists($fm, 'setFolderACL')) $fm->setFolderACL($folderId, true);
+            elseif (method_exists($fm, 'setAcl')) $fm->setAcl($folderId, 1);
+
             $allMappings = $mm->getAllMappings($folderId);
-            $adminIutMapping = null;
+            $mapping = null;
 
             foreach ($allMappings as $m) {
-                if ($m->getType() === 'group' && $m->getId() === 'admin_iut') {
-                    $adminIutMapping = $m;
+                $mappingId = method_exists($m, 'getId') ? $m->getId() : '';
+                if ($mappingId === 'admin_iut') {
+                    $mapping = $m;
                     break;
                 }
             }
+
+            if (!$mapping) {
+                return;
+            }
+
+            $this->applyRulesForMapping($rm, $mapping, $assoName, 'admin_iut');
         } catch (\Throwable $e) {
+            $this->log("Error applyAdminIutAcl: " . $e->getMessage(), 'error');
         }
     }
 
@@ -195,7 +211,7 @@ class GroupFolderService
         try {
             $fm = $this->getService('OCA\GroupFolders\Folder\FolderManager');
             $allFolders = $fm->getAllFolders();
-            $this->log("Renaming structure from '$oldName' to '$newName'");
+            $this->log("Renaming from '$oldName' to '$newName'");
 
             foreach ($allFolders as $id => $folder) {
                 $name = is_string($folder) ? $folder : $folder->mountPoint;
@@ -205,9 +221,9 @@ class GroupFolderService
                     } elseif (method_exists($fm, 'setFolderName')) {
                         $fm->setFolderName($id, $newName);
                     }
+
                     if (!$this->groupManager->groupExists($newName)) {
                         $this->groupManager->createGroup($newName);
-                        $this->log("Created new group '$newName'");
                     }
 
                     $newGroup = $this->groupManager->get($newName);
@@ -226,11 +242,10 @@ class GroupFolderService
                         if (method_exists($fm, 'setGroupPermissions')) {
                             $fm->setGroupPermissions($id, $newName, Constants::PERMISSION_ALL);
                         }
+
                         $fm->removeApplicableGroup($id, $oldName);
                         $oldGroup->delete();
-                        $this->log("Migrated users and deleted old group '$oldName'");
                     }
-
                     break;
                 }
             }
@@ -317,46 +332,58 @@ class GroupFolderService
             }
             if (!$mapping) $mapping = reset($allMappings);
 
-            $userFolder = $this->rootFolder->getUserFolder('admin');
-            $rootNode = $userFolder->get($assoName);
-
-            $this->setRule($rm, $mapping, $rootNode->getId(), Constants::PERMISSION_READ);
-
-            if ($rootNode->nodeExists('archive')) {
-                $this->setRule($rm, $mapping, $rootNode->get('archive')->getId(), Constants::PERMISSION_READ);
-            }
-
-            if ($rootNode->nodeExists('officiel')) {
-                $officiel = $rootNode->get('officiel');
-                $this->setRule($rm, $mapping, $officiel->getId(), Constants::PERMISSION_READ);
-
-                if ($officiel->nodeExists('General')) {
-                    $this->setRule($rm, $mapping, $officiel->get('General')->getId(), Constants::PERMISSION_ALL);
-                }
-
-                if ($officiel->nodeExists('Tresorerie')) {
-                    $treso = $officiel->get('Tresorerie');
-                    if ($role === 'president' || $role === 'treasurer' || $role === 'tresorier' || $role === 'admin_iut') {
-                        $this->setRule($rm, $mapping, $treso->getId(), Constants::PERMISSION_ALL);
-                    } else {
-                        $this->setRule($rm, $mapping, $treso->getId(), 0);
-                    }
-                }
-            }
+            $this->applyRulesForMapping($rm, $mapping, $assoName, $role);
         } catch (\Throwable $e) {
             $this->log("Error ACL: " . $e->getMessage(), 'error');
+        }
+    }
+    
+    private function applyRulesForMapping($rm, $mapping, string $assoName, string $role): void
+    {
+        $userFolder = $this->rootFolder->getUserFolder('admin');
+
+        try {
+            $rootNode = $userFolder->get($assoName);
+        } catch (\Exception $e) {
+            return;
+        }
+
+        $this->setRule($rm, $mapping, $rootNode->getId(), Constants::PERMISSION_READ);
+
+        if ($rootNode->nodeExists('archive')) {
+            $archiveId = $rootNode->get('archive')->getId();
+
+            $archivePerms = Constants::PERMISSION_READ;
+            if ($role === 'president' || $role === 'admin_iut') {
+                $archivePerms = Constants::PERMISSION_ALL & ~Constants::PERMISSION_DELETE;
+            }
+
+            $this->setRule($rm, $mapping, $archiveId, $archivePerms);
+        }
+
+        // C. OFFICIEL
+        if ($rootNode->nodeExists('officiel')) {
+            $officiel = $rootNode->get('officiel');
+            $this->setRule($rm, $mapping, $officiel->getId(), Constants::PERMISSION_READ);
+
+            if ($officiel->nodeExists('General')) {
+                $this->setRule($rm, $mapping, $officiel->get('General')->getId(), Constants::PERMISSION_ALL);
+            }
+
+            if ($officiel->nodeExists('Tresorerie')) {
+                $treso = $officiel->get('Tresorerie');
+                if ($role === 'president' || $role === 'treasurer' || $role === 'tresorier' || $role === 'admin_iut') {
+                    $this->setRule($rm, $mapping, $treso->getId(), Constants::PERMISSION_ALL);
+                } else {
+                    $this->setRule($rm, $mapping, $treso->getId(), 0);
+                }
+            }
         }
     }
 
     private function setRule($ruleManager, $mapping, int $fileId, int $permissions): void
     {
         $fqcnRule = 'OCA\GroupFolders\ACL\Rule';
-        try {
-            $del = new $fqcnRule($mapping, $fileId, Constants::PERMISSION_ALL, 0);
-            $ruleManager->deleteRule($del);
-        } catch (\Throwable $e) {
-        }
-
         try {
             $add = new $fqcnRule($mapping, $fileId, Constants::PERMISSION_ALL, $permissions);
             $ruleManager->saveRule($add);
