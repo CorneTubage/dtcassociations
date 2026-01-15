@@ -9,30 +9,44 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
+use OCP\IUserSession;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 
 class ApiController extends Controller
 {
 
 	private AssociationService $service;
+	private IUserSession $userSession;
 
 	public function __construct(
 		string $appName,
 		IRequest $request,
-		AssociationService $service
+		AssociationService $service,
+		IUserSession $userSession
 	) {
 		parent::__construct($appName, $request);
 		$this->service = $service;
+		$this->userSession = $userSession;
 	}
 
 	/**
-	 * Récupérer toutes les associations
+	 * Helper pour avoir l'ID courant
 	 */
+	private function getCurrentUserId(): string
+	{
+		$user = $this->userSession->getUser();
+		return $user ? $user->getUID() : '';
+	}
+
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function getAssociations(): DataResponse
 	{
 		try {
-			$associations = $this->service->getAllAssociations();
+			$userId = $this->getCurrentUserId();
+			$associations = $this->service->getAllAssociations($userId);
+
 			$data = array_map(function ($assoc) {
 				return $assoc->jsonSerialize();
 			}, $associations);
@@ -42,14 +56,14 @@ class ApiController extends Controller
 		}
 	}
 
-	/**
-	 * Récupérer juste les noms (Light)
-	 */
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function getAssociationNames(): DataResponse
 	{
 		try {
-			$associations = $this->service->getAllAssociations();
+			$userId = $this->getCurrentUserId();
+			$associations = $this->service->getAllAssociations($userId);
+
 			$data = array_map(function ($assoc) {
 				return [
 					'id' => $assoc->getId(),
@@ -62,10 +76,8 @@ class ApiController extends Controller
 		}
 	}
 
-	/**
-	 * Récupérer la liste complète (Alias explicite)
-	 */
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function getAssociationsList(): DataResponse
 	{
 		return $this->getAssociations();
@@ -105,6 +117,7 @@ class ApiController extends Controller
 	}
 
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function getMembers(int $id): DataResponse
 	{
 		try {

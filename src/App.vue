@@ -93,6 +93,7 @@
             <option value="president">Président</option>
             <option value="treasurer">Trésorier</option>
             <option value="secretary">Secrétaire</option>
+            <option v-if="isAdmin" value="admin_iut">Admin IUT</option>
           </select>
           <NcButton type="primary" @click="addMember" :disabled="membersLoading || !selectedUser">
             {{ t('dtcassociations', 'Ajouter') }}
@@ -113,12 +114,13 @@
             <div class="info edit-mode" style="justify-content: space-between;" v-else>
               <div class="edit-mode_user">
               <span class="name">{{ member.user_id }}</span>
-                <select v-model="editingMemberRole" class="dtc-select-small" @click.stop>
-                  <option value="member">Membre</option>
-                  <option value="president">Président</option>
-                  <option value="treasurer">Trésorier</option>
-                  <option value="secretary">Secrétaire</option>
-                </select>
+              <select v-model="editingMemberRole" class="dtc-select-small" @click.stop>
+                <option value="member">Membre</option>
+                <option value="president">Président</option>
+                <option value="treasurer">Trésorier</option>
+                <option value="secretary">Secrétaire</option>
+                <option v-if="isAdmin" value="admin_iut">Admin IUT</option>
+              </select>
               </div>
               <div class="edit-mode_validation">
                 <NcButton type="primary" @click.stop="saveMemberRole(member)" icon="icon-checkmark">
@@ -151,9 +153,9 @@
           <p class="warning-text">Cette action est irréversible. Le dossier de groupe et toutes les données seront supprimés.</p>
         </div>
         <div class="modal-footer">
-            <NcButton @click="closeDeleteModal">Annuler</NcButton>
-            <NcButton @click="confirmDeleteAssociation" type="error">Confirmer la suppression</NcButton>
-          </div>
+          <NcButton @click="closeDeleteModal">Annuler</NcButton>
+          <NcButton @click="confirmDeleteAssociation" type="error">Confirmer la suppression</NcButton>
+        </div>
       </NcModal>
 
       <NcModal v-if="showRenameModal" @close="closeRenameModal" title="Renommer l'association" size="small">
@@ -223,20 +225,25 @@ export default {
 
       showDeleteModal: false,
       associationToDelete: null,
-
       showRenameModal: false,
       associationToRename: null,
       renameInput: '',
-
       showRemoveMemberModal: false,
       memberToRemove: null,
-
       editingMemberId: null,
       editingMemberRole: 'member',
+      isAdmin: false
     };
   },
   mounted() {
     this.fetchAssociations();
+    try {
+        if (window.OC && window.OC.isUserAdmin) {
+            this.isAdmin = window.OC.isUserAdmin();
+        }
+    } catch(e) {
+        console.error("Impossible de vérifier le statut admin", e);
+    }
   },
   methods: {
     async fetchAssociations() {
@@ -256,7 +263,6 @@ export default {
         await this.fetchAssociations();
       } catch (e) { alert(t('dtcassociations', 'Erreur création')); } finally { this.loading = false; }
     },
-
     openDeleteModal(assoc) {
       this.associationToDelete = assoc;
       this.showDeleteModal = true;
@@ -274,22 +280,13 @@ export default {
         await axios.delete(generateUrl(`/apps/dtcassociations/api/1.0/associations/${id}`));
         if (this.selectedAssociation?.id === id) this.selectedAssociation = null;
         await this.fetchAssociations();
-      } catch (e) { 
-        alert(t('dtcassociations', 'Erreur suppression')); 
-        console.error(e);
-      } finally { 
-        this.loading = false; 
-        this.associationToDelete = null;
-      }
+      } catch (e) { alert(t('dtcassociations', 'Erreur suppression')); } finally { this.loading = false; }
     },
-
     openRenameModal(assoc) {
       this.associationToRename = assoc;
       this.renameInput = assoc.name;
       this.showRenameModal = true;
-      this.$nextTick(() => {
-        if(this.$refs.renameInput) this.$refs.renameInput.focus();
-      });
+      this.$nextTick(() => { if(this.$refs.renameInput) this.$refs.renameInput.focus(); });
     },
     closeRenameModal() {
       this.showRenameModal = false;
@@ -305,12 +302,9 @@ export default {
       try {
         await axios.put(generateUrl(`/apps/dtcassociations/api/1.0/associations/${id}`), { name: newName });
         await this.fetchAssociations();
-        if (this.selectedAssociation?.id === id) {
-          this.selectedAssociation.name = newName;
-        }
+        if (this.selectedAssociation?.id === id) this.selectedAssociation.name = newName;
       } catch (e) { alert(t('dtcassociations', 'Erreur modification')); } finally { this.loading = false; }
     },
-
     selectAssociation(assoc) {
       this.selectedAssociation = assoc;
       this.fetchMembers();
@@ -323,26 +317,21 @@ export default {
         this.members = response.data;
       } catch (e) { console.error(e); } finally { this.membersLoading = false; }
     },
-    
     async searchUsers(query) {
       if (!query || query.length < 2) return;
       this.isLoadingUsers = true;
       try {
         const url = window.OC.linkToOCS('apps/files_sharing/api/v1', 2) + 'sharees';
-        const response = await axios.get(url, {
-          params: { search: query, itemType: 'file', format: 'json', perPage: 20 }
-        });
+        const response = await axios.get(url, { params: { search: query, itemType: 'file', format: 'json', perPage: 20 } });
         const users = response.data.ocs?.data?.users || [];
         this.userOptions = users.map(u => ({ id: u.value.shareWith, label: u.label }));
       } catch (e) { console.error(e); } finally { this.isLoadingUsers = false; }
     },
-
     async addMember() {
       if (!this.selectedUser) return;
       await this.updateMemberRoleCall(this.selectedUser.id, this.newMemberRole);
       this.selectedUser = null; 
     },
-
     startEditMember(member) {
       this.editingMemberId = member.user_id;
       this.editingMemberRole = member.role;
@@ -365,7 +354,6 @@ export default {
         await this.fetchMembers();
       } catch (e) { alert(t('dtcassociations', "Erreur sauvegarde")); } finally { this.membersLoading = false; }
     },
-
     openRemoveMemberModal(member) {
       this.memberToRemove = member;
       this.showRemoveMemberModal = true;
@@ -384,9 +372,8 @@ export default {
         await this.fetchMembers();
       } catch (e) { alert(t('dtcassociations', 'Erreur suppression')); } finally { this.membersLoading = false; }
     },
-
     translateRole(role) {
-      const roles = { 'member': 'Membre', 'president': 'Président', 'treasurer': 'Trésorier', 'secretary': 'Secrétaire' };
+      const roles = { 'member': 'Membre', 'president': 'Président', 'treasurer': 'Trésorier', 'secretary': 'Secrétaire', 'admin_iut': 'Admin IUT' };
       return roles[role] || role;
     }
   }

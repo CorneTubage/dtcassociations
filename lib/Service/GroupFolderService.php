@@ -56,9 +56,38 @@ class GroupFolderService
         return \OC::$server->get($className);
     }
 
+    public function ensureGlobalGroupsExist(): void
+    {
+        $groups = ['president', 'admin_iut'];
+        foreach ($groups as $gid) {
+            if (!$this->groupManager->groupExists($gid)) {
+                $this->groupManager->createGroup($gid);
+                $this->log("Groupe global '$gid' créé.");
+            }
+        }
+    }
+
+    public function updateUserGlobalGroup(string $userId, string $groupName, bool $shouldBeIn): void
+    {
+        $this->ensureGlobalGroupsExist();
+        $group = $this->groupManager->get($groupName);
+        $user = $this->userManager->get($userId);
+
+        if (!$group || !$user) return;
+
+        $isIn = $group->inGroup($user);
+        if ($shouldBeIn && !$isIn) {
+            $group->addUser($user);
+            $this->log("User $userId ajouté au groupe global $groupName");
+        } elseif (!$shouldBeIn && $isIn) {
+            $group->removeUser($user);
+            $this->log("User $userId retiré du groupe global $groupName");
+        }
+    }
+
     public function ensureAssociationStructure(string $assoName): int
     {
-        $this->log("Ensure structure: $assoName");
+        $this->ensureGlobalGroupsExist();
 
         if (!$this->groupManager->groupExists($assoName)) {
             $this->groupManager->createGroup($assoName);
@@ -79,23 +108,42 @@ class GroupFolderService
 
             if ($folderId === -1) {
                 $folderId = $fm->createFolder($assoName);
-                $this->log("Created folder ID $folderId");
             }
 
             try {
                 $fm->addApplicableGroup($folderId, $assoName);
+                $fm->addApplicableGroup($folderId, 'admin');
+                $fm->addApplicableGroup($folderId, 'admin_iut');
                 if (method_exists($fm, 'setGroupPermissions')) {
                     $fm->setGroupPermissions($folderId, $assoName, Constants::PERMISSION_ALL);
+                    $fm->setGroupPermissions($folderId, 'admin_iut', Constants::PERMISSION_ALL);
                 }
-                $fm->addApplicableGroup($folderId, 'admin');
             } catch (\Throwable $e) {
             }
 
             $this->createSubFolders($assoName);
+            $this->applyAdminIutAcl($folderId, $assoName);
             return $folderId;
         } catch (\Throwable $e) {
             $this->log("Error structure: " . $e->getMessage(), 'error');
             return -1;
+        }
+    }
+    private function applyAdminIutAcl(int $folderId, string $assoName): void
+    {
+        try {
+            $rm = $this->getService('OCA\GroupFolders\ACL\RuleManager');
+            $mm = $this->getService('OCA\GroupFolders\ACL\UserMapping\UserMappingManager');
+            $allMappings = $mm->getAllMappings($folderId);
+            $adminIutMapping = null;
+
+            foreach ($allMappings as $m) {
+                if ($m->getType() === 'group' && $m->getId() === 'admin_iut') {
+                    $adminIutMapping = $m;
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
         }
     }
 
@@ -110,7 +158,7 @@ class GroupFolderService
             }
 
             $officiel = $mountPoint->get('officiel');
-            foreach (['General', 'Tresorie'] as $sub) {
+            foreach (['General', 'Tresorerie'] as $sub) {
                 if (!$officiel->nodeExists($sub)) $officiel->newFolder($sub);
             }
         } catch (\Throwable $e) {
@@ -142,7 +190,6 @@ class GroupFolderService
         }
     }
 
-    // --- TACHE 4 : RENOMMAGE COMPLET ---
     public function renameFolder(string $oldName, string $newName): void
     {
         try {
@@ -152,18 +199,12 @@ class GroupFolderService
 
             foreach ($allFolders as $id => $folder) {
                 $name = is_string($folder) ? $folder : $folder->mountPoint;
-
                 if ($name === $oldName) {
-                    // 1. Renommer le dossier GroupFolder
                     if (method_exists($fm, 'renameFolder')) {
                         $fm->renameFolder($id, $newName);
                     } elseif (method_exists($fm, 'setFolderName')) {
                         $fm->setFolderName($id, $newName);
                     }
-
-                    // 2. Migration du Groupe Nextcloud
-                    // Comme on ne peut pas renommer un groupe, on crée le nouveau, migre, et supprime l'ancien.
-
                     if (!$this->groupManager->groupExists($newName)) {
                         $this->groupManager->createGroup($newName);
                         $this->log("Created new group '$newName'");
@@ -175,23 +216,17 @@ class GroupFolderService
                         $oldGroup = $this->groupManager->get($oldName);
                         $users = $oldGroup->getUsers();
 
-                        // Déplacer les utilisateurs
                         foreach ($users as $user) {
                             if (!$newGroup->inGroup($user)) {
                                 $newGroup->addUser($user);
                             }
                         }
 
-                        // Mettre à jour les permissions du dossier pour le nouveau groupe
                         $fm->addApplicableGroup($id, $newName);
                         if (method_exists($fm, 'setGroupPermissions')) {
                             $fm->setGroupPermissions($id, $newName, Constants::PERMISSION_ALL);
                         }
-
-                        // Retirer l'ancien groupe du dossier
                         $fm->removeApplicableGroup($id, $oldName);
-
-                        // Supprimer l'ancien groupe
                         $oldGroup->delete();
                         $this->log("Migrated users and deleted old group '$oldName'");
                     }
@@ -201,25 +236,6 @@ class GroupFolderService
             }
         } catch (\Throwable $e) {
             $this->log("Error rename: " . $e->getMessage(), 'error');
-        }
-    }
-
-    public function updatePresidentGroupMembership(string $userId, bool $shouldBeInGroup): void
-    {
-        $groupName = 'president';
-        if (!$this->groupManager->groupExists($groupName)) {
-            $this->groupManager->createGroup($groupName);
-        }
-        $group = $this->groupManager->get($groupName);
-        $user = $this->userManager->get($userId);
-
-        if (!$group || !$user) return;
-
-        $isIn = $group->inGroup($user);
-        if ($shouldBeInGroup && !$isIn) {
-            $group->addUser($user);
-        } elseif (!$shouldBeInGroup && $isIn) {
-            $group->removeUser($user);
         }
     }
 
@@ -244,6 +260,25 @@ class GroupFolderService
                 $group->removeUser($user);
             }
         } catch (\Throwable $e) {
+        }
+    }
+
+    public function updatePresidentGroupMembership(string $userId, bool $shouldBeInGroup): void
+    {
+        $groupName = 'president';
+        if (!$this->groupManager->groupExists($groupName)) {
+            $this->groupManager->createGroup($groupName);
+        }
+        $group = $this->groupManager->get($groupName);
+        $user = $this->userManager->get($userId);
+
+        if (!$group || !$user) return;
+
+        $isIn = $group->inGroup($user);
+        if ($shouldBeInGroup && !$isIn) {
+            $group->addUser($user);
+        } elseif (!$shouldBeInGroup && $isIn) {
+            $group->removeUser($user);
         }
     }
 
@@ -285,7 +320,7 @@ class GroupFolderService
             $userFolder = $this->rootFolder->getUserFolder('admin');
             $rootNode = $userFolder->get($assoName);
 
-            $this->setRule($rm, $mapping, $rootNode->getId(), Constants::PERMISSION_ALL);
+            $this->setRule($rm, $mapping, $rootNode->getId(), Constants::PERMISSION_READ);
 
             if ($rootNode->nodeExists('archive')) {
                 $this->setRule($rm, $mapping, $rootNode->get('archive')->getId(), Constants::PERMISSION_READ);
@@ -293,15 +328,15 @@ class GroupFolderService
 
             if ($rootNode->nodeExists('officiel')) {
                 $officiel = $rootNode->get('officiel');
-                $this->setRule($rm, $mapping, $officiel->getId(), Constants::PERMISSION_ALL);
+                $this->setRule($rm, $mapping, $officiel->getId(), Constants::PERMISSION_READ);
 
                 if ($officiel->nodeExists('General')) {
                     $this->setRule($rm, $mapping, $officiel->get('General')->getId(), Constants::PERMISSION_ALL);
                 }
 
-                if ($officiel->nodeExists('Tresorie')) {
-                    $treso = $officiel->get('Tresorie');
-                    if ($role === 'president' || $role === 'treasurer' || $role === 'tresorier') {
+                if ($officiel->nodeExists('Tresorerie')) {
+                    $treso = $officiel->get('Tresorerie');
+                    if ($role === 'president' || $role === 'treasurer' || $role === 'tresorier' || $role === 'admin_iut') {
                         $this->setRule($rm, $mapping, $treso->getId(), Constants::PERMISSION_ALL);
                     } else {
                         $this->setRule($rm, $mapping, $treso->getId(), 0);

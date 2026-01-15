@@ -9,44 +9,36 @@ use OCA\DTCAssociations\Db\AssociationMapper;
 use OCA\DTCAssociations\Db\AssociationMember;
 use OCA\DTCAssociations\Db\AssociationMemberMapper;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\IGroupManager;
 use Exception;
 
 class AssociationService
 {
-
     private AssociationMapper $associationMapper;
     private AssociationMemberMapper $memberMapper;
     private GroupFolderService $gfService;
+    private IGroupManager $groupManager;
 
     public function __construct(
         AssociationMapper $associationMapper,
         AssociationMemberMapper $memberMapper,
-        GroupFolderService $gfService
+        GroupFolderService $gfService,
+        IGroupManager $groupManager
     ) {
         $this->associationMapper = $associationMapper;
         $this->memberMapper = $memberMapper;
         $this->gfService = $gfService;
+        $this->groupManager = $groupManager;
     }
 
-    private function syncPresidentGroup(string $userId): void
+    /**
+     * Vérifie si l'utilisateur a un accès global (Admin ou Admin IUT)
+     */
+    private function hasGlobalAccess(string $userId): bool
     {
-        try {
-            $memberships = $this->memberMapper->getUserAssociations($userId);
-            $isPresidentSomewhere = false;
-
-            foreach ($memberships as $membership) {
-                if ($membership->getRole() === 'president') {
-                    $isPresidentSomewhere = true;
-                    break;
-                }
-            }
-
-            $this->gfService->updatePresidentGroupMembership($userId, $isPresidentSomewhere);
-        } catch (\Throwable $e) {
-        }
+        return $this->groupManager->isAdmin($userId) ||
+            $this->groupManager->isInGroup($userId, 'admin_iut');
     }
-
-    // --- ASSOCIATIONS ---
 
     public function createAssociation(string $name, string $code): Association
     {
@@ -92,9 +84,32 @@ class AssociationService
         }
     }
 
-    public function getAllAssociations(): array
+    /**
+     * Récupère les associations visibles pour l'utilisateur
+     */
+    public function getAllAssociations(string $userId): array
     {
-        return $this->associationMapper->findAll();
+        if ($this->hasGlobalAccess($userId)) {
+            return $this->associationMapper->findAll();
+        }
+        $memberships = $this->memberMapper->getUserAssociations($userId);
+
+        if (empty($memberships)) {
+            return [];
+        }
+
+        $presidentCodes = [];
+        foreach ($memberships as $m) {
+            if ($m->getRole() === 'president') {
+                $presidentCodes[] = $m->getGroupId();
+            }
+        }
+
+        if (empty($presidentCodes)) {
+            return [];
+        }
+
+        return $this->associationMapper->findByCodes($presidentCodes);
     }
 
     public function deleteAssociation(int $id): void
@@ -123,7 +138,21 @@ class AssociationService
         }
     }
 
-    // --- MEMBRES ---
+    private function syncPresidentGroup(string $userId): void
+    {
+        try {
+            $memberships = $this->memberMapper->getUserAssociations($userId);
+            $isPresidentSomewhere = false;
+            foreach ($memberships as $membership) {
+                if ($membership->getRole() === 'president') {
+                    $isPresidentSomewhere = true;
+                    break;
+                }
+            }
+            $this->gfService->updatePresidentGroupMembership($userId, $isPresidentSomewhere);
+        } catch (\Throwable $e) {
+        }
+    }
 
     public function addMember(int $associationId, string $userId, string $role): AssociationMember
     {
@@ -141,19 +170,14 @@ class AssociationService
             $currentMembers = $this->memberMapper->getAssociationMembers($code);
             $presidentCount = 0;
             $isAlreadyPresident = false;
-
             foreach ($currentMembers as $m) {
                 if ($m->getRole() === 'president') {
                     $presidentCount++;
-                    if ($m->getUserId() === $userId) {
-                        $isAlreadyPresident = true;
-                    }
+                    if ($m->getUserId() === $userId) $isAlreadyPresident = true;
                 }
             }
-
-            // On bloque si on atteint 2 et que l'utilisateur n'est pas déjà l'un des présidents
             if ($presidentCount >= 2 && !$isAlreadyPresident) {
-                throw new Exception("Impossible d'ajouter : cette association a déjà 2 présidents.");
+                throw new Exception("Cette association a déjà 2 présidents.");
             }
         }
 
@@ -177,6 +201,7 @@ class AssociationService
         }
 
         $this->syncPresidentGroup($userId);
+        $this->syncGlobalGroups($userId);
 
         return $result;
     }
@@ -197,6 +222,7 @@ class AssociationService
             $this->memberMapper->delete($member);
 
             $this->syncPresidentGroup($userId);
+            $this->syncGlobalGroups($userId);
         } catch (DoesNotExistException $e) {
             throw new Exception("Membre ou association introuvable.");
         }
@@ -210,6 +236,24 @@ class AssociationService
             return $this->memberMapper->getAssociationMembers($association->getCode());
         } catch (DoesNotExistException $e) {
             throw new Exception("Association introuvable.");
+        }
+    }
+
+    private function syncGlobalGroups(string $userId): void
+    {
+        try {
+            $memberships = $this->memberMapper->getUserAssociations($userId);
+            $isPresidentSomewhere = false;
+            $isAdminIutSomewhere = false;
+
+            foreach ($memberships as $membership) {
+                if ($membership->getRole() === 'president') $isPresidentSomewhere = true;
+                if ($membership->getRole() === 'admin_iut') $isAdminIutSomewhere = true;
+            }
+
+            $this->gfService->updateUserGlobalGroup($userId, 'president', $isPresidentSomewhere);
+            $this->gfService->updateUserGlobalGroup($userId, 'admin_iut', $isAdminIutSomewhere);
+        } catch (\Throwable $e) {
         }
     }
 }
