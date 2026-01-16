@@ -26,6 +26,7 @@ class GroupFolderService
     private $folderManager = null;
     private $ruleManager = null;
     private $mappingManager = null;
+    private const QUOTA_ASSO = 10;  // 10 GB
 
     public function __construct(
         IGroupManager $groupManager,
@@ -84,7 +85,7 @@ class GroupFolderService
 
     public function ensureAssociationStructure(string $assoName): int
     {
-        $this->ensureGlobalGroupsExist();
+        $this->log("Ensure structure: $assoName");
 
         if (!$this->groupManager->groupExists($assoName)) {
             $this->groupManager->createGroup($assoName);
@@ -105,6 +106,13 @@ class GroupFolderService
 
             if ($folderId === -1) {
                 $folderId = $fm->createFolder($assoName);
+                $this->log("Created folder ID $folderId");
+
+                if (method_exists($fm, 'setFolderQuota')) {
+                    $quotaBytes = self::QUOTA_ASSO * 1024 * 1024 * 1024;
+                    $fm->setFolderQuota($folderId, $quotaBytes);
+                    $this->log("Quota set to 10GB for folder ID $folderId");
+                }
             }
 
             try {
@@ -129,9 +137,6 @@ class GroupFolderService
         }
     }
 
-    /**
-     * Applique les règles ACL spécifiques pour le groupe admin_iut
-     */
     private function applyAdminIutAcl(int $folderId, string $assoName): void
     {
         try {
@@ -153,9 +158,7 @@ class GroupFolderService
                 }
             }
 
-            if (!$mapping) {
-                return;
-            }
+            if (!$mapping) return;
 
             $this->applyRulesForMapping($rm, $mapping, $assoName, 'admin_iut');
         } catch (\Throwable $e) {
@@ -337,7 +340,7 @@ class GroupFolderService
             $this->log("Error ACL: " . $e->getMessage(), 'error');
         }
     }
-    
+
     private function applyRulesForMapping($rm, $mapping, string $assoName, string $role): void
     {
         $userFolder = $this->rootFolder->getUserFolder('admin');
@@ -352,16 +355,13 @@ class GroupFolderService
 
         if ($rootNode->nodeExists('archive')) {
             $archiveId = $rootNode->get('archive')->getId();
-
             $archivePerms = Constants::PERMISSION_READ;
             if ($role === 'president' || $role === 'admin_iut') {
                 $archivePerms = Constants::PERMISSION_ALL & ~Constants::PERMISSION_DELETE;
             }
-
             $this->setRule($rm, $mapping, $archiveId, $archivePerms);
         }
 
-        // C. OFFICIEL
         if ($rootNode->nodeExists('officiel')) {
             $officiel = $rootNode->get('officiel');
             $this->setRule($rm, $mapping, $officiel->getId(), Constants::PERMISSION_READ);
@@ -384,6 +384,12 @@ class GroupFolderService
     private function setRule($ruleManager, $mapping, int $fileId, int $permissions): void
     {
         $fqcnRule = 'OCA\GroupFolders\ACL\Rule';
+        try {
+            $del = new $fqcnRule($mapping, $fileId, Constants::PERMISSION_ALL, 0);
+            $ruleManager->deleteRule($del);
+        } catch (\Throwable $e) {
+        }
+
         try {
             $add = new $fqcnRule($mapping, $fileId, Constants::PERMISSION_ALL, $permissions);
             $ruleManager->saveRule($add);

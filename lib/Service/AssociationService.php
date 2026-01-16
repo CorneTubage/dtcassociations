@@ -30,6 +30,7 @@ class AssociationService
         $this->gfService = $gfService;
         $this->groupManager = $groupManager;
     }
+
     public function hasGlobalAccess(string $userId): bool
     {
         return $this->groupManager->isAdmin($userId) ||
@@ -172,17 +173,24 @@ class AssociationService
             } catch (DoesNotExistException $e) {
             }
         }
+
         if ($role === 'president') {
+            $userMemberships = $this->memberMapper->getUserAssociations($userId);
+            foreach ($userMemberships as $m) {
+                if ($m->getRole() === 'president' && $m->getGroupId() !== $code) {
+                    throw new Exception("Cet utilisateur est déjà président d'une autre association.");
+                }
+            }
             $currentMembers = $this->memberMapper->getAssociationMembers($code);
             $presidentCount = 0;
-            $isAlreadyPresident = false;
+            $isAlreadyPresidentOfThisAsso = false;
             foreach ($currentMembers as $m) {
                 if ($m->getRole() === 'president') {
                     $presidentCount++;
-                    if ($m->getUserId() === $userId) $isAlreadyPresident = true;
+                    if ($m->getUserId() === $userId) $isAlreadyPresidentOfThisAsso = true;
                 }
             }
-            if ($presidentCount >= 2 && !$isAlreadyPresident) {
+            if ($presidentCount >= 2 && !$isAlreadyPresidentOfThisAsso) {
                 throw new Exception("Cette association a déjà 2 présidents.");
             }
         }

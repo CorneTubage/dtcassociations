@@ -2,22 +2,23 @@
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
 	<id>dtcassociations</id>
-	<name>DTCAssociations</name>
-	<summary>Custom roles and Group Folder ACLs.</summary>
-	<description>Manages student associations, custom roles, and Group Folder ACLs.</description>
-	<version>1.0.8</version>
+    <name>Gestion Associations</name>
+    <summary>Gestion des associations et de leurs membres</summary>
+    <description>Application de gestion des associations pour l'IUT de Laval. Permet de gérer les rôles (Président, Trésorier...), les accès aux dossiers de groupe et les quotas.</description>
+    <version>1.0.9</version>
 	<licence>agpl</licence>
-	<author mail="Noe.Arhan.Etu@univ-lemans.fr" homepage="">Noé ARHAN</author>
+	<author>Noé ARHAN</author>
 	<namespace>DTCAssociations</namespace>
 	<category>organization</category>
 	<bugs>http://jsp.com</bugs>
 	<dependencies>
 		<nextcloud min-version="30" max-version="32"/>
+        <app>groupfolders</app>
 	</dependencies>
 	<navigations>
 		<navigation>
 			<id>dtcassociations</id>
-			<name>DTCAssociations</name>
+			<name>Gestion Associations</name>
 			<route>dtcassociations.page.index</route>
 			<icon>app.svg</icon>
 			<type>link</type>

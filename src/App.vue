@@ -21,7 +21,7 @@
 
     <NcAppContent>
       <div v-if="!selectedAssociation" class="dtc-container">
-        <h2>{{ t('dtcassociations', 'Gestion des Associations') }}</h2>
+        <h2 class="app-title">{{ t('dtcassociations', 'Gestion Associations') }}</h2>
 
         <div class="add-form" v-if="canDelete">
           <input
@@ -31,7 +31,7 @@
             :placeholder="t('dtcassociations', 'Nom de la nouvelle association...')"
             @keyup.enter="createAssociation"
           />
-          <NcButton type="primary" @click="createAssociation" :disabled="loading">
+          <NcButton type="primary" class="btn-orange" @click="createAssociation" :disabled="loading">
             {{ t('dtcassociations', 'Ajouter') }}
           </NcButton>
         </div>
@@ -45,17 +45,21 @@
             class="association-item clickable"
             @click="selectAssociation(assoc)"
           >
-            <span class="icon-category-organization icon"></span>
+            <span class="icon-category-organization icon-white"></span>
             <div class="info">
               <span class="name">{{ assoc.name }}</span>
-              <small class="code">({{ assoc.code }})</small>
             </div>
             
             <NcActions :primary="true" menu-name="Actions" @click.stop>
-              <NcActionButton @click.stop="openRenameModal(assoc)" icon="icon-rename" :close-after-click="true">
+              <NcActionButton class="btn-orange" @click.stop="openRenameModal(assoc)" icon="icon-rename" :close-after-click="true">
                 {{ t('dtcassociations', 'Renommer') }}
               </NcActionButton>
-              <NcActionButton v-if="canDelete" @click.stop="openDeleteModal(assoc)" icon="icon-delete" :close-after-click="true">
+              <NcActionButton 
+                v-if="canDelete"
+                @click.stop="openDeleteModal(assoc)" 
+                icon="icon-delete" 
+                :close-after-click="true"
+              >
                 {{ t('dtcassociations', 'Supprimer') }}
               </NcActionButton>
             </NcActions>
@@ -71,7 +75,7 @@
            <NcButton @click="selectedAssociation = null" type="tertiary" icon="icon-arrow-left-active">
              {{ t('dtcassociations', 'Retour') }}
            </NcButton>
-           <h2>{{ selectedAssociation.name }} - Membres</h2>
+           <h2 class="app-title">{{ selectedAssociation.name }} - Membres</h2>
         </div>
 
         <div class="add-form">
@@ -95,7 +99,7 @@
             <option value="secretary">Secrétaire</option>
             <option v-if="canDelete" value="admin_iut">Admin IUT</option>
           </select>
-          <NcButton type="primary" @click="addMember" :disabled="membersLoading || !selectedUser">
+          <NcButton type="primary" class="btn-orange" @click="addMember" :disabled="membersLoading || !selectedUser">
             {{ t('dtcassociations', 'Ajouter') }}
           </NcButton>
         </div>
@@ -104,36 +108,33 @@
 
         <ul v-else class="association-list">
           <li v-for="member in members" :key="member.id" class="association-item">
-            <span class="icon-user icon"></span>
+            <span class="icon-user icon-white"></span>
             
             <div class="info" v-if="editingMemberId !== member.user_id">
               <span class="name">{{ member.user_id }}</span>
               <span class="role-badge">{{ translateRole(member.role) }}</span>
             </div>
 
-            <div class="info edit-mode" style="justify-content: space-between;" v-else>
-              <div class="edit-mode_user">
-              <span class="name">{{ member.user_id }}</span>
-              <select v-model="editingMemberRole" class="dtc-select-small" @click.stop>
-                <option value="member">Membre</option>
-                <option value="president">Président</option>
-                <option value="treasurer">Trésorier</option>
-                <option value="secretary">Secrétaire</option>
-                <option v-if="canDelete" value="admin_iut">Admin IUT</option>
-              </select>
+            <div class="info edit-mode"  v-else>
+              <div class="user">
+                <span class="name">{{ member.user_id }}</span>
+                <select v-model="editingMemberRole" class="dtc-select-small" @click.stop>
+                  <option value="member">Membre</option>
+                  <option value="president">Président</option>
+                  <option value="treasurer">Trésorier</option>
+                  <option value="secretary">Secrétaire</option>
+                  <option v-if="canDelete" value="admin_iut">Admin IUT</option>
+                </select>
               </div>
-              <div class="edit-mode_validation">
-                <NcButton type="primary" @click.stop="saveMemberRole(member)" icon="icon-checkmark">
-                  OK
-                </NcButton>
-              <NcButton type="tertiary" @click.stop="cancelEditMember" icon="icon-close">
-                  Annuler
-                </NcButton>
+              <div class="actions">
+                <NcButton type="primary" class="btn-orange" @click.stop="saveMemberRole(member)" icon="icon-checkmark">OK</NcButton>
+                <NcButton type="tertiary" class="btn-cancel" @click.stop="cancelEditMember" icon="icon-close">Annuler</NcButton>
               </div>
             </div>
 
             <NcActions :primary="true" menu-name="Actions" v-if="editingMemberId !== member.user_id">
-              <NcActionButton v-if="!(member.user_id === currentUserId && member.role === 'president')"
+              <NcActionButton 
+                v-if="!(member.user_id === currentUserId && member.role === 'president')"
                 @click="startEditMember(member)" 
                 icon="icon-rename" 
                 :close-after-click="true"
@@ -150,16 +151,16 @@
           </li>
         </ul>
       </div>
-      
+
       <NcModal v-if="showDeleteModal" @close="closeDeleteModal" title="Suppression définitive" size="small">
         <div class="modal-content">
           <p><strong>Attention :</strong> Vous êtes sur le point de supprimer l'association <em>{{ associationToDelete?.name }}</em>.</p>
           <p class="warning-text">Cette action est irréversible. Le dossier de groupe et toutes les données seront supprimés.</p>
         </div>
-        <div class="modal-footer">
-          <NcButton @click="closeDeleteModal">Annuler</NcButton>
-          <NcButton @click="confirmDeleteAssociation" type="error">Confirmer la suppression</NcButton>
-        </div>
+          <div class="modal-footer-custom">
+            <NcButton @click="closeDeleteModal">Annuler</NcButton>
+            <NcButton @click="confirmDeleteAssociation" type="error">Confirmer la suppression</NcButton>
+          </div>
       </NcModal>
 
       <NcModal v-if="showRenameModal" @close="closeRenameModal" title="Renommer l'association" size="small">
@@ -168,21 +169,21 @@
           <input v-model="renameInput" type="text" class="dtc-input full-width" @keyup.enter="confirmRenameAssociation" ref="renameInput" />
           <p class="info-text">Le dossier d'équipe sera également renommé.</p>
         </div>
-        <div class="modal-footer">
-          <NcButton @click="closeRenameModal">Annuler</NcButton>
-          <NcButton @click="confirmRenameAssociation" type="primary">Valider</NcButton>
-        </div>
+          <div class="modal-footer-custom">
+            <NcButton @click="closeRenameModal">Annuler</NcButton>
+            <NcButton @click="confirmRenameAssociation" type="primary" class="btn-orange">Valider</NcButton>
+          </div>
       </NcModal>
 
       <NcModal v-if="showRemoveMemberModal" @close="closeRemoveMemberModal" title="Retirer un membre" size="small">
         <div class="modal-content">
           <p>Voulez-vous vraiment retirer <strong>{{ memberToRemove?.user_id }}</strong> de cette association ?</p>
-          <p>Il perdra l'accès au dossier d'équipe.</p>
+          <p class="warning-text">Il perdra l'accès au dossier d'équipe.</p>
         </div>
-        <div class="modal-footer">
-          <NcButton @click="closeRemoveMemberModal">Annuler</NcButton>
-          <NcButton @click="confirmRemoveMember" type="error">Retirer</NcButton>
-        </div>
+          <div class="modal-footer-custom">
+            <NcButton @click="closeRemoveMemberModal">Annuler</NcButton>
+            <NcButton @click="confirmRemoveMember" type="error">Retirer</NcButton>
+          </div>
       </NcModal>
 
     </NcAppContent>
@@ -230,6 +231,7 @@ export default {
       memberToRemove: null,
       editingMemberId: null,
       editingMemberRole: 'member',
+      
       isAdmin: false,
       currentUserId: ''
     };
@@ -241,9 +243,7 @@ export default {
     this.checkPermissions();
     this.fetchAssociations();
     try {
-        if (window.OC && window.OC.isUserAdmin) {
-            this.isAdmin = window.OC.isUserAdmin();
-        }
+        if (window.OC && window.OC.isUserAdmin) this.isAdmin = window.OC.isUserAdmin();
     } catch(e) {}
   },
   methods: {
@@ -251,9 +251,7 @@ export default {
       try {
         const response = await axios.get(generateUrl('/apps/dtcassociations/api/1.0/user/permissions'));
         this.canDelete = response.data.canDelete;
-      } catch (e) {
-        this.canDelete = false;
-      }
+      } catch (e) { this.canDelete = false; }
     },
     async fetchAssociations() {
       this.loading = true;
@@ -289,9 +287,7 @@ export default {
         await axios.delete(generateUrl(`/apps/dtcassociations/api/1.0/associations/${id}`));
         if (this.selectedAssociation?.id === id) this.selectedAssociation = null;
         await this.fetchAssociations();
-      } catch (e) { 
-         alert(t('dtcassociations', 'Erreur suppression : vous n\'avez pas les droits.')); 
-      } finally { this.loading = false; }
+      } catch (e) { alert(t('dtcassociations', 'Erreur suppression : vous n\'avez pas les droits.')); } finally { this.loading = false; }
     },
     openRenameModal(assoc) {
       this.associationToRename = assoc;
@@ -391,29 +387,96 @@ export default {
 };
 </script>
 
+<style>
+@font-face {
+  font-family: 'Luciole';
+  src: url('@/assets/fonts/Luciole-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+:root {
+  --color-dtc-primary: #282F63;
+  --color-dtc-secondary: #D4451B;
+  --color-dtc-text: #fff;
+}
+.app-content{ background: var(--color-dtc-primary) !important;}
+.app-dtcassociations, .app-dtcassociations * {
+  font-family: 'Luciole', sans-serif !important;
+}
+.button-vue--vue-primary{
+  background-color: var(--color-dtc-secondary) !important;
+  color: var(--color-dtc-text) !important;
+}
+
+.modal-container{
+  background: var(--color-dtc-primary) !important;
+  padding: 20px !important;
+}
+
+.modal-container__content {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  align-items: center;
+}
+</style>
+
 <style scoped>
 .app-dtcassociations { margin: 0;}
-.dtc-container { padding: 20px; max-width: 800px; }
+.dtc-container { padding: 20px; }
+.app-title { color: var(--color-dtc-text); font-weight: bold; margin-bottom: 20px; }
 .header-actions { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
-.add-form { display: flex; gap: 10px; margin-bottom: 20px; align-items: flex-start; }
+.add-form { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
 .dtc-input { flex-grow: 1; padding: 10px; border: 1px solid var(--color-border); border-radius: var(--border-radius); box-sizing: border-box; }
 .dtc-input.full-width { width: 100%; margin: 10px 0; }
 .user-select-container { flex-grow: 1; min-width: 200px; }
 .dtc-select { padding: 10px; border: 1px solid var(--color-border); border-radius: var(--border-radius); background: var(--color-main-background); color: var(--color-text-main); height: 44px; }
 .dtc-select-small { padding: 5px; border: 1px solid var(--color-border); border-radius: var(--border-radius); background: var(--color-main-background); color: var(--color-text-main); margin-right: 5px; }
 .association-list { list-style: none; padding: 0; }
-.association-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid var(--color-border); }
+.association-item {
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    padding: 15px; 
+    color: var(--color-dtc-text);
+    border-radius: var(--border-radius-large);
+    background: rgba(0, 0, 0, 0.4);
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
 .association-item.clickable { cursor: pointer; }
-.association-item.clickable:hover { background-color: var(--color-background-hover); }
-.association-item .icon { font-size: 20px; opacity: 0.7; }
-.association-item .info { flex-grow: 1; display: flex; align-items: center; gap: 10px; }
-.association-item .info.edit-mode { gap: 5px; }
-.association-item .info .edit-mode_user { display: flex; align-items: center; gap: 5px; }
-.association-item .info .edit-mode_validation { display: flex; align-items: center; gap: 5px; }
-.association-item .code { color: var(--color-text-maxcontrast); }
-.role-badge { background-color: var(--color-primary-light); color: var(--color-primary); padding: 2px 8px; border-radius: 10px; font-size: 0.85em; font-weight: bold; }
+.association-item.clickable:hover { opacity: 0.95; }
+.association-item .icon { font-size: 24px; opacity: 1; color: var(--color-dtc-text); }
+.association-item .icon-white { filter: brightness(0) invert(1); cursor: pointer;}
+.association-item .info { flex-grow: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.association-item .info.edit-mode { gap: 5px; justify-content: space-between;}
+.user { display: flex; align-items: center; gap: 10px; }
+.actions { display: flex; gap: 5px; }
+.role-badge { 
+    background-color: rgba(255,255,255,0.2); 
+    color: #fff; 
+    padding: 4px 10px; 
+    border-radius: 12px; 
+    font-size: 0.85em; 
+    font-weight: bold; 
+    border: 1px solid rgba(255,255,255,0.3);
+}
 .modal-content { padding: 20px; }
-.modal-footer { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
-.warning-text { color: var(--color-error); margin-top: 10px; }
+.modal-footer-custom { 
+    margin-top: 20px;
+    display: flex; 
+    justify-content: flex-end; 
+    gap: 10px; 
+}
+.warning-text { color: var(--color-dtc-secondary); margin-top: 10px; }
 .info-text { color: var(--color-text-maxcontrast); font-size: 0.9em; font-style: italic; }
+::v-deep .btn-orange {
+    background-color: var(--color-dtc-secondary) !important;
+    border-color: var(--color-dtc-secondary) !important;
+    color: #fff !important;
+}
+::v-deep .btn-orange:hover, ::v-deep .btn-orange:focus {
+    background-color: #b83a15 !important;
+    border-color: #b83a15 !important;
+}
 </style>
