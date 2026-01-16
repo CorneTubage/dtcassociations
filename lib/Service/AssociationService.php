@@ -30,11 +30,7 @@ class AssociationService
         $this->gfService = $gfService;
         $this->groupManager = $groupManager;
     }
-
-    /**
-     * Vérifie si l'utilisateur a un accès global (Admin ou Admin IUT)
-     */
-    private function hasGlobalAccess(string $userId): bool
+    public function hasGlobalAccess(string $userId): bool
     {
         return $this->groupManager->isAdmin($userId) ||
             $this->groupManager->isInGroup($userId, 'admin_iut');
@@ -84,9 +80,6 @@ class AssociationService
         }
     }
 
-    /**
-     * Récupère les associations visibles pour l'utilisateur
-     */
     public function getAllAssociations(string $userId): array
     {
         if ($this->hasGlobalAccess($userId)) {
@@ -112,8 +105,12 @@ class AssociationService
         return $this->associationMapper->findByCodes($presidentCodes);
     }
 
-    public function deleteAssociation(int $id): void
+    public function deleteAssociation(int $id, string $userId): void
     {
+        if (!$this->hasGlobalAccess($userId)) {
+            throw new Exception("Droit refusé : seuls les Admins ou Admin IUT peuvent supprimer une association.");
+        }
+
         try {
             /** @var Association $association */
             $association = $this->associationMapper->find($id);
@@ -154,7 +151,7 @@ class AssociationService
         }
     }
 
-    public function addMember(int $associationId, string $userId, string $role): AssociationMember
+    public function addMember(int $associationId, string $userId, string $role, string $actorId = ''): AssociationMember
     {
         try {
             /** @var Association $association */
@@ -166,6 +163,15 @@ class AssociationService
         $code = $association->getCode();
         $assoName = $association->getName();
 
+        if ($actorId !== '' && $actorId === $userId) {
+            try {
+                $currentMember = $this->memberMapper->getMember($userId, $code);
+                if ($currentMember->getRole() === 'president' && $role !== 'president') {
+                    throw new Exception("Les présidents ne peuvent pas modifier leur propre rôle.");
+                }
+            } catch (DoesNotExistException $e) {
+            }
+        }
         if ($role === 'president') {
             $currentMembers = $this->memberMapper->getAssociationMembers($code);
             $presidentCount = 0;

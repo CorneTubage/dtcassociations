@@ -30,13 +30,19 @@ class ApiController extends Controller
 		$this->userSession = $userSession;
 	}
 
-	/**
-	 * Helper pour avoir l'ID courant
-	 */
 	private function getCurrentUserId(): string
 	{
 		$user = $this->userSession->getUser();
 		return $user ? $user->getUID() : '';
+	}
+
+	#[NoAdminRequired]
+	public function getUserPermissions(): DataResponse
+	{
+		$userId = $this->getCurrentUserId();
+		return new DataResponse([
+			'canDelete' => $this->service->hasGlobalAccess($userId)
+		]);
 	}
 
 	#[NoAdminRequired]
@@ -109,10 +115,11 @@ class ApiController extends Controller
 	public function deleteAssociation(int $id): DataResponse
 	{
 		try {
-			$this->service->deleteAssociation($id);
+			$userId = $this->getCurrentUserId();
+			$this->service->deleteAssociation($id, $userId);
 			return new DataResponse(['status' => 'success']);
 		} catch (\Exception $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_FORBIDDEN);
 		}
 	}
 
@@ -135,7 +142,8 @@ class ApiController extends Controller
 	public function addMember(int $id, string $userId, string $role): DataResponse
 	{
 		try {
-			$member = $this->service->addMember($id, $userId, $role);
+			$actorId = $this->getCurrentUserId();
+			$member = $this->service->addMember($id, $userId, $role, $actorId);
 			return new DataResponse($member->jsonSerialize());
 		} catch (\Exception $e) {
 			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);

@@ -23,7 +23,7 @@
       <div v-if="!selectedAssociation" class="dtc-container">
         <h2>{{ t('dtcassociations', 'Gestion des Associations') }}</h2>
 
-        <div class="add-form">
+        <div class="add-form" v-if="canDelete">
           <input
             v-model="newAssocName"
             type="text"
@@ -55,7 +55,7 @@
               <NcActionButton @click.stop="openRenameModal(assoc)" icon="icon-rename" :close-after-click="true">
                 {{ t('dtcassociations', 'Renommer') }}
               </NcActionButton>
-              <NcActionButton @click.stop="openDeleteModal(assoc)" icon="icon-delete" :close-after-click="true">
+              <NcActionButton v-if="canDelete" @click.stop="openDeleteModal(assoc)" icon="icon-delete" :close-after-click="true">
                 {{ t('dtcassociations', 'Supprimer') }}
               </NcActionButton>
             </NcActions>
@@ -93,7 +93,7 @@
             <option value="president">Président</option>
             <option value="treasurer">Trésorier</option>
             <option value="secretary">Secrétaire</option>
-            <option v-if="isAdmin" value="admin_iut">Admin IUT</option>
+            <option v-if="canDelete" value="admin_iut">Admin IUT</option>
           </select>
           <NcButton type="primary" @click="addMember" :disabled="membersLoading || !selectedUser">
             {{ t('dtcassociations', 'Ajouter') }}
@@ -119,24 +119,28 @@
                 <option value="president">Président</option>
                 <option value="treasurer">Trésorier</option>
                 <option value="secretary">Secrétaire</option>
-                <option v-if="isAdmin" value="admin_iut">Admin IUT</option>
+                <option v-if="canDelete" value="admin_iut">Admin IUT</option>
               </select>
               </div>
               <div class="edit-mode_validation">
                 <NcButton type="primary" @click.stop="saveMemberRole(member)" icon="icon-checkmark">
                   OK
                 </NcButton>
-                <NcButton type="tertiary" @click.stop="cancelEditMember" icon="icon-close">
+              <NcButton type="tertiary" @click.stop="cancelEditMember" icon="icon-close">
                   Annuler
                 </NcButton>
               </div>
             </div>
 
             <NcActions :primary="true" menu-name="Actions" v-if="editingMemberId !== member.user_id">
-              <NcActionButton @click="startEditMember(member)" icon="icon-rename" :close-after-click="true">
+              <NcActionButton v-if="!(member.user_id === currentUserId && member.role === 'president')"
+                @click="startEditMember(member)" 
+                icon="icon-rename" 
+                :close-after-click="true"
+              >
                 {{ t('dtcassociations', 'Modifier Rôle') }}
               </NcActionButton>
-              <NcActionButton @click="openRemoveMemberModal(member)" icon="icon-delete" :close-after-click="true">
+              <NcActionButton v-if="!(member.user_id === currentUserId && member.role === 'president')" @click="openRemoveMemberModal(member)" icon="icon-delete" :close-after-click="true">
                 {{ t('dtcassociations', 'Retirer') }}
               </NcActionButton>
             </NcActions>
@@ -146,7 +150,7 @@
           </li>
         </ul>
       </div>
-
+      
       <NcModal v-if="showDeleteModal" @close="closeDeleteModal" title="Suppression définitive" size="small">
         <div class="modal-content">
           <p><strong>Attention :</strong> Vous êtes sur le point de supprimer l'association <em>{{ associationToDelete?.name }}</em>.</p>
@@ -161,13 +165,7 @@
       <NcModal v-if="showRenameModal" @close="closeRenameModal" title="Renommer l'association" size="small">
         <div class="modal-content">
           <p>Entrez le nouveau nom pour l'association :</p>
-          <input 
-            v-model="renameInput" 
-            type="text" 
-            class="dtc-input full-width" 
-            @keyup.enter="confirmRenameAssociation"
-            ref="renameInput"
-          />
+          <input v-model="renameInput" type="text" class="dtc-input full-width" @keyup.enter="confirmRenameAssociation" ref="renameInput" />
           <p class="info-text">Le dossier d'équipe sera également renommé.</p>
         </div>
         <div class="modal-footer">
@@ -232,20 +230,31 @@ export default {
       memberToRemove: null,
       editingMemberId: null,
       editingMemberRole: 'member',
-      isAdmin: false
+      isAdmin: false,
+      currentUserId: ''
     };
   },
   mounted() {
+    if (window.OC && window.OC.getCurrentUser) {
+        this.currentUserId = window.OC.getCurrentUser().uid;
+    }
+    this.checkPermissions();
     this.fetchAssociations();
     try {
         if (window.OC && window.OC.isUserAdmin) {
             this.isAdmin = window.OC.isUserAdmin();
         }
-    } catch(e) {
-        console.error("Impossible de vérifier le statut admin", e);
-    }
+    } catch(e) {}
   },
   methods: {
+    async checkPermissions() {
+      try {
+        const response = await axios.get(generateUrl('/apps/dtcassociations/api/1.0/user/permissions'));
+        this.canDelete = response.data.canDelete;
+      } catch (e) {
+        this.canDelete = false;
+      }
+    },
     async fetchAssociations() {
       this.loading = true;
       try {
@@ -280,7 +289,9 @@ export default {
         await axios.delete(generateUrl(`/apps/dtcassociations/api/1.0/associations/${id}`));
         if (this.selectedAssociation?.id === id) this.selectedAssociation = null;
         await this.fetchAssociations();
-      } catch (e) { alert(t('dtcassociations', 'Erreur suppression')); } finally { this.loading = false; }
+      } catch (e) { 
+         alert(t('dtcassociations', 'Erreur suppression : vous n\'avez pas les droits.')); 
+      } finally { this.loading = false; }
     },
     openRenameModal(assoc) {
       this.associationToRename = assoc;
