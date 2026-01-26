@@ -44,7 +44,7 @@ class AssociationService
 
     public function createAssociation(string $name, string $code): Association
     {
-        if (preg_match('/[:;`\/\\\\]/', $name)) {
+        if (preg_match('/[^\p{L}0-9 _-]/u', $name)) {
             throw new Exception("Le nom de l'association contient des caractères interdits.");
         }
 
@@ -69,7 +69,7 @@ class AssociationService
 
     public function updateAssociation(int $id, string $name): Association
     {
-        if (preg_match('/[:;`\/\\\\]/', $name)) {
+        if (preg_match('/[^\p{L}0-9 _-]/u', $name)) {
             throw new Exception("Le nom de l'association contient des caractères interdits.");
         }
 
@@ -270,18 +270,18 @@ class AssociationService
                 'president' => 'president',
                 'treasurer' => 'tresorier',
                 'secretary' => 'secretaire',
-                'teacher'   => 'enseignent',
+                'teacher' => 'enseignent',
                 'admin_iut' => 'admin_iut',
-                'invite'    => 'invite'
+                'invite' => 'invite'
             ];
 
             $status = [
                 'president' => false,
                 'treasurer' => false,
                 'secretary' => false,
-                'teacher'   => false,
+                'teacher' => false,
                 'admin_iut' => false,
-                'invite'    => false
+                'invite' => false
             ];
 
             foreach ($memberships as $membership) {
@@ -296,5 +296,10 @@ class AssociationService
             }
         } catch (\Throwable $e) {
         }
+    }
+
+    public function getStats(string $assoName): array
+    {
+        return $this->gfService->getFolderStats($assoName);
     }
 }

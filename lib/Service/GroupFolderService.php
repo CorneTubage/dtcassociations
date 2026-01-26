@@ -409,4 +409,47 @@ class GroupFolderService
         } catch (\Throwable $e) {
         }
     }
+
+    /**
+     * Retourne un tableau ['usage' => int, 'quota' => int]
+     * Quota -3 = illimité
+     */
+    public function getFolderStats(string $assoName): array
+    {
+        $stats = ['usage' => 0, 'quota' => -3]; // -3 est le code par défaut pour illimité dans GroupFolders
+
+        try {
+            // 1. Récupérer l'USAGE RÉEL (via le système de fichiers)
+            $userFolder = $this->rootFolder->getUserFolder('admin');
+            if ($userFolder->nodeExists($assoName)) {
+                $node = $userFolder->get($assoName);
+                $stats['usage'] = $node->getSize();
+            }
+
+            // 2. Récupérer le QUOTA CONFIGURÉ (via FolderManager)
+            $fm = $this->getService('OCA\GroupFolders\Folder\FolderManager');
+            $allFolders = $fm->getAllFolders();
+            
+            foreach ($allFolders as $folder) {
+                // Gestion compatibilité versions (objet ou tableau)
+                $mountPoint = is_string($folder) ? $folder : $folder->mountPoint;
+                
+                if ($mountPoint === $assoName) {
+                    // Si c'est un objet (versions récentes)
+                    if (method_exists($folder, 'getQuota')) {
+                        $stats['quota'] = $folder->getQuota();
+                    } 
+                    // Si c'est une propriété publique (anciennes versions)
+                    elseif (isset($folder->quota)) {
+                        $stats['quota'] = $folder->quota;
+                    }
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->log("Erreur stats pour $assoName : " . $e->getMessage(), 'error');
+        }
+
+        return $stats;
+    }
 }

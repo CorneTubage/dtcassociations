@@ -47,20 +47,30 @@ class ApiController extends Controller
 	}
 
 	#[NoAdminRequired]
-	#[NoCSRFRequired]
-	public function getAssociations(): DataResponse
-	{
-		try {
-			$userId = $this->getCurrentUserId();
-			$associations = $this->service->getAllAssociations($userId);
-			$data = array_map(function ($assoc) {
-				return $assoc->jsonSerialize();
-			}, $associations);
-			return new DataResponse($data);
-		} catch (\Exception $e) {
-			return new DataResponse([], Http::STATUS_INTERNAL_SERVER_ERROR);
-		}
-	}
+    #[NoCSRFRequired]
+    public function getAssociations(): DataResponse
+    {
+        try {
+            $userId = $this->getCurrentUserId();
+            $associations = $this->service->getAllAssociations($userId);
+            
+            $data = array_map(function ($assoc) {
+                $item = $assoc->jsonSerialize();
+                
+                // Récupération des stats dynamiques
+                $stats = $this->service->getStats($assoc->getName());
+                
+                $item['usage'] = $stats['usage']; // Octets utilisés
+                $item['quota'] = $stats['quota']; // Octets max (-3 si illimité)
+                
+                return $item;
+            }, $associations);
+            
+            return new DataResponse($data);
+        } catch (\Exception $e) {
+            return new DataResponse([], Http::STATUS_INTERNAL_SERVER_ERROR);
+        }
+    }
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
