@@ -23,7 +23,7 @@
       <div v-if="!selectedAssociation" class="dtc-container">
         <h2 class="app-title">{{ t('dtcassociations', 'Gestion Associations') }}</h2>
 
-        <div class="add-form" v-if="canDelete">
+        <div class="add-form" v-if="canManage">
           <input
             v-model="newAssocName"
             type="text"
@@ -35,9 +35,7 @@
             {{ t('dtcassociations', 'Ajouter') }}
           </NcButton>
         </div>
-
         <div v-if="loading" class="icon-loading"></div>
-
         <ul v-else class="association-list">
           <li 
             v-for="assoc in associations" 
@@ -49,15 +47,14 @@
             <div class="info">
               <span class="name">{{ assoc.name }}</span>
             </div>
-            
             <NcActions :primary="true" menu-name="Actions" @click.stop>
               <NcActionButton class="btn-orange" @click.stop="openRenameModal(assoc)" icon="icon-rename" :close-after-click="true">
                 {{ t('dtcassociations', 'Renommer') }}
               </NcActionButton>
               <NcActionButton 
                 v-if="canDelete"
-                @click.stop="openDeleteModal(assoc)" 
-                icon="icon-delete" 
+                @click.stop="openDeleteModal(assoc)"
+                icon="icon-delete"
                 :close-after-click="true"
               >
                 {{ t('dtcassociations', 'Supprimer') }}
@@ -69,15 +66,13 @@
           </li>
         </ul>
       </div>
-
       <div v-else class="dtc-container">
         <div class="header-actions">
            <NcButton @click="selectedAssociation = null" type="tertiary" icon="icon-arrow-left-active">
-             {{ t('dtcassociations', 'Retour') }}
-           </NcButton>
+            {{ t('dtcassociations', 'Retour') }}
+          </NcButton>
            <h2 class="app-title">{{ selectedAssociation.name }} - Membres</h2>
         </div>
-
         <div class="add-form">
           <div class="user-select-container">
             <NcMultiselect
@@ -91,47 +86,43 @@
               @search-change="searchUsers"
             />
           </div>
-
           <select v-model="newMemberRole" class="dtc-select">
-            <option value="member">Membre</option>
-            <option value="president">Président</option>
-            <option value="treasurer">Trésorier</option>
-            <option value="secretary">Secrétaire</option>
+            <option value="president">Président / Vice-Président</option>
+            <option value="treasurer">Trésorier / Vice-Trésorier</option>
+            <option value="secretary">Secrétaire / Vice-Secrétaire</option>
+            <option value="teacher">Enseignant</option>
+            <option v-if="canManage" value="invite">Invité</option>
             <option v-if="canDelete" value="admin_iut">Admin IUT</option>
           </select>
           <NcButton type="primary" class="btn-orange" @click="addMember" :disabled="membersLoading || !selectedUser">
             {{ t('dtcassociations', 'Ajouter') }}
           </NcButton>
         </div>
-
         <div v-if="membersLoading" class="icon-loading"></div>
-
         <ul v-else class="association-list">
           <li v-for="member in members" :key="member.id" class="association-item">
             <span class="icon-user icon-white"></span>
-            
             <div class="info" v-if="editingMemberId !== member.user_id">
               <span class="name">{{ member.user_id }}</span>
               <span class="role-badge">{{ translateRole(member.role) }}</span>
             </div>
-
-            <div class="info edit-mode"  v-else>
+            <div class="info edit-mode" v-else>
               <div class="user">
-                <span class="name">{{ member.user_id }}</span>
-                <select v-model="editingMemberRole" class="dtc-select-small" @click.stop>
-                  <option value="member">Membre</option>
-                  <option value="president">Président</option>
-                  <option value="treasurer">Trésorier</option>
-                  <option value="secretary">Secrétaire</option>
-                  <option v-if="canDelete" value="admin_iut">Admin IUT</option>
-                </select>
+              <span class="name">{{ member.user_id }}</span>
+              <select v-model="editingMemberRole" class="dtc-select-small" @click.stop>
+                <option value="president">Président / Vice-Président</option>
+                <option value="treasurer">Trésorier / Vice-Trésorier</option>
+                <option value="secretary">Secrétaire / Vice-Secrétaire</option>
+                <option value="teacher">Enseignant</option>
+                <option v-if="canManage" value="invite">Invité</option>
+                <option v-if="canDelete" value="admin_iut">Admin IUT</option>
+              </select>
               </div>
               <div class="actions">
                 <NcButton type="primary" class="btn-orange" @click.stop="saveMemberRole(member)" icon="icon-checkmark">OK</NcButton>
                 <NcButton type="tertiary" class="btn-cancel" @click.stop="cancelEditMember" icon="icon-close">Annuler</NcButton>
               </div>
             </div>
-
             <NcActions :primary="true" menu-name="Actions" v-if="editingMemberId !== member.user_id">
               <NcActionButton 
                 v-if="!(member.user_id === currentUserId && member.role === 'president')"
@@ -151,39 +142,36 @@
           </li>
         </ul>
       </div>
-
       <NcModal v-if="showDeleteModal" @close="closeDeleteModal" title="Suppression définitive" size="small">
         <div class="modal-content">
           <p><strong>Attention :</strong> Vous êtes sur le point de supprimer l'association <em>{{ associationToDelete?.name }}</em>.</p>
-          <p class="warning-text">Cette action est irréversible. Le dossier de groupe et toutes les données seront supprimés.</p>
+          <p class="warning-text">Cette action est irréversible.</p>
         </div>
-          <div class="modal-footer-custom">
-            <NcButton @click="closeDeleteModal">Annuler</NcButton>
-            <NcButton @click="confirmDeleteAssociation" type="error">Confirmer la suppression</NcButton>
-          </div>
+        <div class="modal-footer-custom">
+          <NcButton @click="closeDeleteModal">Annuler</NcButton>
+          <NcButton @click="confirmDeleteAssociation" type="error">Confirmer la suppression</NcButton>
+        </div>
       </NcModal>
-
       <NcModal v-if="showRenameModal" @close="closeRenameModal" title="Renommer l'association" size="small">
         <div class="modal-content">
           <p>Entrez le nouveau nom pour l'association :</p>
           <input v-model="renameInput" type="text" class="dtc-input full-width" @keyup.enter="confirmRenameAssociation" ref="renameInput" />
           <p class="info-text">Le dossier d'équipe sera également renommé.</p>
         </div>
-          <div class="modal-footer-custom">
-            <NcButton @click="closeRenameModal">Annuler</NcButton>
-            <NcButton @click="confirmRenameAssociation" type="primary" class="btn-orange">Valider</NcButton>
-          </div>
+        <div class="modal-footer-custom">
+          <NcButton @click="closeRenameModal">Annuler</NcButton>
+          <NcButton @click="confirmRenameAssociation" type="primary" class="btn-orange">Valider</NcButton>
+        </div>
       </NcModal>
-
       <NcModal v-if="showRemoveMemberModal" @close="closeRemoveMemberModal" title="Retirer un membre" size="small">
         <div class="modal-content">
           <p>Voulez-vous vraiment retirer <strong>{{ memberToRemove?.user_id }}</strong> de cette association ?</p>
           <p class="warning-text">Il perdra l'accès au dossier d'équipe.</p>
         </div>
-          <div class="modal-footer-custom">
-            <NcButton @click="closeRemoveMemberModal">Annuler</NcButton>
-            <NcButton @click="confirmRemoveMember" type="error">Retirer</NcButton>
-          </div>
+        <div class="modal-footer-custom">
+          <NcButton @click="closeRemoveMemberModal">Annuler</NcButton>
+          <NcButton @click="confirmRemoveMember" type="error">Retirer</NcButton>
+        </div>
       </NcModal>
 
     </NcAppContent>
@@ -220,7 +208,7 @@ export default {
       selectedUser: null,
       userOptions: [],
       isLoadingUsers: false,
-      newMemberRole: 'member',
+      newMemberRole: 'president',
 
       showDeleteModal: false,
       associationToDelete: null,
@@ -233,7 +221,9 @@ export default {
       editingMemberRole: 'member',
       
       isAdmin: false,
-      currentUserId: ''
+      currentUserId: '',
+      canDelete: false,
+      canManage: false
     };
   },
   mounted() {
@@ -251,7 +241,8 @@ export default {
       try {
         const response = await axios.get(generateUrl('/apps/dtcassociations/api/1.0/user/permissions'));
         this.canDelete = response.data.canDelete;
-      } catch (e) { this.canDelete = false; }
+        this.canManage = response.data.canManage;
+      } catch (e) { this.canDelete = false; this.canManage = false; }
     },
     async fetchAssociations() {
       this.loading = true;
@@ -287,7 +278,7 @@ export default {
         await axios.delete(generateUrl(`/apps/dtcassociations/api/1.0/associations/${id}`));
         if (this.selectedAssociation?.id === id) this.selectedAssociation = null;
         await this.fetchAssociations();
-      } catch (e) { alert(t('dtcassociations', 'Erreur suppression : vous n\'avez pas les droits.')); } finally { this.loading = false; }
+      } catch (e) { alert(t('dtcassociations', 'Erreur suppression')); } finally { this.loading = false; }
     },
     openRenameModal(assoc) {
       this.associationToRename = assoc;
@@ -380,7 +371,14 @@ export default {
       } catch (e) { alert(t('dtcassociations', 'Erreur suppression')); } finally { this.membersLoading = false; }
     },
     translateRole(role) {
-      const roles = { 'member': 'Membre', 'president': 'Président', 'treasurer': 'Trésorier', 'secretary': 'Secrétaire', 'admin_iut': 'Admin IUT' };
+      const roles = {
+        'president': 'Président / Vice-Président',
+        'treasurer': 'Trésorier / Vice-Trésorier',
+        'secretary': 'Secrétaire / Vice-Secrétaire',
+        'teacher': 'Enseignant',
+        'admin_iut': 'Admin IUT',
+        'invite': 'Invité'
+      };
       return roles[role] || role;
     }
   }
@@ -407,12 +405,10 @@ export default {
   background-color: var(--color-dtc-secondary) !important;
   color: var(--color-dtc-text) !important;
 }
-
 .modal-container{
   background: var(--color-dtc-primary) !important;
   padding: 20px !important;
 }
-
 .modal-container__content {
   display: flex;
   flex-direction: column;

@@ -41,7 +41,8 @@ class ApiController extends Controller
 	{
 		$userId = $this->getCurrentUserId();
 		return new DataResponse([
-			'canDelete' => $this->service->hasGlobalAccess($userId)
+			'canManage' => $this->service->hasGlobalAccess($userId),
+			'canDelete' => $this->service->isFullAdmin($userId)
 		]);
 	}
 
@@ -52,7 +53,6 @@ class ApiController extends Controller
 		try {
 			$userId = $this->getCurrentUserId();
 			$associations = $this->service->getAllAssociations($userId);
-
 			$data = array_map(function ($assoc) {
 				return $assoc->jsonSerialize();
 			}, $associations);
@@ -69,12 +69,8 @@ class ApiController extends Controller
 		try {
 			$userId = $this->getCurrentUserId();
 			$associations = $this->service->getAllAssociations($userId);
-
 			$data = array_map(function ($assoc) {
-				return [
-					'id' => $assoc->getId(),
-					'name' => $assoc->getName()
-				];
+				return ['id' => $assoc->getId(), 'name' => $assoc->getName()];
 			}, $associations);
 			return new DataResponse($data);
 		} catch (\Exception $e) {

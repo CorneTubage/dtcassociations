@@ -37,8 +37,17 @@ class AssociationService
             $this->groupManager->isInGroup($userId, 'admin_iut');
     }
 
+    public function isFullAdmin(string $userId): bool
+    {
+        return $this->groupManager->isAdmin($userId);
+    }
+
     public function createAssociation(string $name, string $code): Association
     {
+        if (preg_match('/[:;`\/\\\\]/', $name)) {
+            throw new Exception("Le nom de l'association contient des caractères interdits.");
+        }
+
         try {
             $this->associationMapper->findByCode($code);
             throw new Exception("Une association avec le code '$code' existe déjà.");
@@ -60,6 +69,10 @@ class AssociationService
 
     public function updateAssociation(int $id, string $name): Association
     {
+        if (preg_match('/[:;`\/\\\\]/', $name)) {
+            throw new Exception("Le nom de l'association contient des caractères interdits.");
+        }
+
         try {
             /** @var Association $association */
             $association = $this->associationMapper->find($id);
@@ -86,6 +99,7 @@ class AssociationService
         if ($this->hasGlobalAccess($userId)) {
             return $this->associationMapper->findAll();
         }
+
         $memberships = $this->memberMapper->getUserAssociations($userId);
 
         if (empty($memberships)) {
@@ -108,8 +122,8 @@ class AssociationService
 
     public function deleteAssociation(int $id, string $userId): void
     {
-        if (!$this->hasGlobalAccess($userId)) {
-            throw new Exception("Droit refusé : seuls les Admins ou Admin IUT peuvent supprimer une association.");
+        if (!$this->isFullAdmin($userId)) {
+            throw new Exception("Droit refusé : seuls les administrateurs peuvent supprimer une association.");
         }
 
         try {
@@ -164,6 +178,12 @@ class AssociationService
         $code = $association->getCode();
         $assoName = $association->getName();
 
+        if ($role === 'invite') {
+            if ($actorId !== '' && !$this->hasGlobalAccess($actorId)) {
+                throw new Exception("Seuls les administrateurs peuvent ajouter des invités.");
+            }
+        }
+
         if ($actorId !== '' && $actorId === $userId) {
             try {
                 $currentMember = $this->memberMapper->getMember($userId, $code);
@@ -180,18 +200,6 @@ class AssociationService
                 if ($m->getRole() === 'president' && $m->getGroupId() !== $code) {
                     throw new Exception("Cet utilisateur est déjà président d'une autre association.");
                 }
-            }
-            $currentMembers = $this->memberMapper->getAssociationMembers($code);
-            $presidentCount = 0;
-            $isAlreadyPresidentOfThisAsso = false;
-            foreach ($currentMembers as $m) {
-                if ($m->getRole() === 'president') {
-                    $presidentCount++;
-                    if ($m->getUserId() === $userId) $isAlreadyPresidentOfThisAsso = true;
-                }
-            }
-            if ($presidentCount >= 2 && !$isAlreadyPresidentOfThisAsso) {
-                throw new Exception("Cette association a déjà 2 présidents.");
             }
         }
 
@@ -257,16 +265,35 @@ class AssociationService
     {
         try {
             $memberships = $this->memberMapper->getUserAssociations($userId);
-            $isPresidentSomewhere = false;
-            $isAdminIutSomewhere = false;
+
+            $rolesToGroups = [
+                'president' => 'president',
+                'treasurer' => 'tresorier',
+                'secretary' => 'secretaire',
+                'teacher'   => 'enseignent',
+                'admin_iut' => 'admin_iut',
+                'invite'    => 'invite'
+            ];
+
+            $status = [
+                'president' => false,
+                'treasurer' => false,
+                'secretary' => false,
+                'teacher'   => false,
+                'admin_iut' => false,
+                'invite'    => false
+            ];
 
             foreach ($memberships as $membership) {
-                if ($membership->getRole() === 'president') $isPresidentSomewhere = true;
-                if ($membership->getRole() === 'admin_iut') $isAdminIutSomewhere = true;
+                $role = $membership->getRole();
+                if (isset($status[$role])) {
+                    $status[$role] = true;
+                }
             }
 
-            $this->gfService->updateUserGlobalGroup($userId, 'president', $isPresidentSomewhere);
-            $this->gfService->updateUserGlobalGroup($userId, 'admin_iut', $isAdminIutSomewhere);
+            foreach ($rolesToGroups as $role => $groupName) {
+                $this->gfService->updateUserGlobalGroup($userId, $groupName, $status[$role]);
+            }
         } catch (\Throwable $e) {
         }
     }

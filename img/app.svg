@@ -1,12 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-    <defs>
-        <style>.cls-1{fill:#0082c9;}.cls-2{fill:#fff;}</style>
-    </defs>
-    <path class="cls-1" d="M58,14H34L30,10H6a4,4,0,0,0-4,4V50a4,4,0,0,0,4,4H58a4,4,0,0,0,4-4V18A4,4,0,0,0,58,14Z"/>
-    
-    <circle class="cls-2" cx="32" cy="32" r="14" opacity="0.3"/>
-    <g transform="translate(16, 16)">
-        <path class="cls-2" d="M16,4a4,4,0,1,1-4,4A4,4,0,0,1,16,4m0-2a6,6,0,1,0,6,6A6,6,0,0,0,16,2Z"/>
-        <path class="cls-2" d="M16,18c-5.33,0-16,2.67-16,8v4H32V26C32,20.67,21.33,18,16,18Z"/>
-    </g>
-</svg>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg width="100%" height="100%" viewBox="0 0 267 267" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><path d="M241.667,58.333l-100,0l-16.667,-16.666l-100,-0c-9.143,-0 -16.667,7.523 -16.667,16.666l0,150c0,9.143 7.524,16.667 16.667,16.667l216.667,0c9.143,0 16.666,-7.524 16.666,-16.667l0,-133.333c0,-9.143 -7.523,-16.667 -16.666,-16.667Z" style="fill:#fff;fill-rule:nonzero;"/><circle cx="133.333" cy="133.333" r="58.333" style="fill:#fff;fill-opacity:0.3;"/><g><path d="M133.333,83.333c9.143,0 16.667,7.524 16.667,16.667c0,9.143 -7.524,16.667 -16.667,16.667c-9.143,-0 -16.666,-7.524 -16.666,-16.667c-0,-9.143 7.523,-16.667 16.666,-16.667m0,-8.333c-13.714,0 -25,11.285 -25,25c0,13.715 11.286,25 25,25c13.715,0 25,-11.285 25,-25c0,-13.715 -11.285,-25 -25,-25Z" style="fill:#adadad;fill-rule:nonzero;"/><path d="M133.333,141.667c-22.208,-0 -66.666,11.125 -66.666,33.333l-0,16.667l133.333,-0l0,-16.667c0,-22.208 -44.458,-33.333 -66.667,-33.333Z" style="fill:#adadad;fill-rule:nonzero;"/></g></svg>
