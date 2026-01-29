@@ -160,14 +160,20 @@
             </div>
             <NcActions :primary="true" menu-name="Actions" v-if="editingMemberId !== member.user_id">
               <NcActionButton 
-                v-if="!(member.user_id === currentUserId && member.role === 'president')"
+                v-if="!(member.user_id === currentUserId && (member.role === 'president' || member.role === 'admin_iut'))"
                 @click="startEditMember(member)" 
                 icon="icon-rename" 
                 :close-after-click="true"
               >
                 {{ t('dtcassociations', 'Modifier Rôle') }}
               </NcActionButton>
-              <NcActionButton v-if="!(member.user_id === currentUserId && member.role === 'president')" @click="openRemoveMemberModal(member)" icon="icon-delete" :close-after-click="true">
+              
+              <NcActionButton 
+                v-if="!(member.user_id === currentUserId && (member.role === 'president' || member.role === 'admin_iut'))" 
+                @click="openRemoveMemberModal(member)" 
+                icon="icon-delete" 
+                :close-after-click="true"
+              >
                 {{ t('dtcassociations', 'Retirer') }}
               </NcActionButton>
             </NcActions>

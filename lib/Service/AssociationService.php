@@ -187,8 +187,14 @@ class AssociationService
         if ($actorId !== '' && $actorId === $userId) {
             try {
                 $currentMember = $this->memberMapper->getMember($userId, $code);
-                if ($currentMember->getRole() === 'president' && $role !== 'president') {
+                $currentRole = $currentMember->getRole();
+
+                if ($currentRole === 'president' && $role !== 'president') {
                     throw new Exception("Les présidents ne peuvent pas modifier leur propre rôle.");
+                }
+
+                if ($currentRole === 'admin_iut' && $role !== 'admin_iut') {
+                    throw new Exception("Les administrateurs IUT ne peuvent pas modifier leur propre rôle.");
                 }
             } catch (DoesNotExistException $e) {
             }
