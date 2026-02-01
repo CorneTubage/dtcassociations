@@ -45,7 +45,7 @@
           </div>
 
           <p class="help-text">
-            {{ t('dtcassociations', 'Autorisé : Lettres, accents, chiffres, espaces, - et _') }}
+            {{ t('dtcassociations', 'Autorisé : Lettres, accents, chiffres, espaces, tiret, tiret du bas, apostrophe') }}
           </p>
         </div>
         <div v-if="loading" class="icon-loading"></div>
@@ -213,7 +213,7 @@
           </div>
 
           <p class="help-text" style="margin-bottom: 10px;">
-            {{ t('dtcassociations', 'Autorisé : Lettres, accents, chiffres, espaces, - et _') }}
+            {{ t('dtcassociations', 'Autorisé : Lettres, accents, chiffres, espaces, tiret, tiret du bas, apostrophe') }}
           </p>
 
           <p class="info-text">Le dossier d'équipe sera également renommé.</p>
@@ -326,11 +326,12 @@ export default {
       // 0-9 (chiffres)
       // " " (un espace)
       // "-" (un tiret)
+      // "'" (un apostrophe)
       // "_" (un underscore)
-      const forbiddenPattern = /[^\p{L}0-9 _-]/u;
+      const forbiddenPattern = /[^\p{L}0-9 _'-]/u;
       
       if (forbiddenPattern.test(this.newAssocName)) {
-        this.creationError = t('dtcassociations', 'Seuls les lettres, chiffres, tirets, tirets du bas et espaces sont autorisés.');
+        this.creationError = t('dtcassociations', 'Seuls les lettres, chiffres, tirets, tirets du bas, apostrophes et espaces sont autorisés.');
         return; 
       }
 
@@ -387,10 +388,10 @@ export default {
 
       // 2. Vérification Regex (La même que pour la création)
       // Autorise : Lettres (avec accents \p{L}), Chiffres, Espaces, Underscore, Tiret
-      const forbiddenPattern = /[^\p{L}0-9 _-]/u;
+      const forbiddenPattern = /[^\p{L}0-9 _'-]/u;
       
       if (forbiddenPattern.test(this.renameInput)) {
-        this.renameError = t('dtcassociations', 'Seuls les lettres, chiffres, tirets, tirets du bas et espaces sont autorisés.');
+        this.renameError = t('dtcassociations', 'Seuls les lettres, chiffres, tirets, tirets du bas, apostrophes et espaces sont autorisés.');
         return;
       }
 

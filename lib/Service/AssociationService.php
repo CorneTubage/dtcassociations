@@ -44,7 +44,7 @@ class AssociationService
 
     public function createAssociation(string $name, string $code): Association
     {
-        if (preg_match('/[^\p{L}0-9 _-]/u', $name)) {
+        if (preg_match("/[^\p{L}0-9 _'-]/u", $name)) {
             throw new Exception("Le nom de l'association contient des caractères interdits.");
         }
 
@@ -69,7 +69,7 @@ class AssociationService
 
     public function updateAssociation(int $id, string $name): Association
     {
-        if (preg_match('/[^\p{L}0-9 _-]/u', $name)) {
+        if (preg_match("/[^\p{L}0-9 _'-]/u", $name)) {
             throw new Exception("Le nom de l'association contient des caractères interdits.");
         }
 
