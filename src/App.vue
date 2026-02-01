@@ -12,15 +12,19 @@
         <h2 class="app-title">{{ t('dtcassociations', 'Gestion Associations') }}</h2>
 
         <div v-if="canManage" class="add-form-container">
-          <div class="add-form">
-            <input v-model="newAssocName" type="text" class="dtc-input" :class="{ 'input-error': creationError }"
-              :placeholder="t('dtcassociations', 'Nom de la nouvelle association...')" maxlength="50"
-              @keyup.enter="createAssociation" @input="creationError = ''" />
-            <NcButton type="primary" class="btn-orange" @click="createAssociation" :disabled="loading">
-              {{ t('dtcassociations', 'Ajouter') }}
-            </NcButton>
-          </div>
+          <div class="add-form-association">
+            <label for="newAssocName">{{ t('dtcassociations', 'Création d\'une association') }}</label>
 
+            <div class="add-form-input-container">
+              <input v-model="newAssocName" id="newAssocName" type="text" class="dtc-input"
+                :class="{ 'input-error': creationError }"
+                :placeholder="t('dtcassociations', 'Nom de la nouvelle association...')" maxlength="50"
+                @keyup.enter="createAssociation" @input="creationError = ''" />
+              <NcButton type="primary" class="btn-orange" @click="createAssociation" :disabled="loading">
+                {{ t('dtcassociations', 'Ajouter') }}
+              </NcButton>
+            </div>
+          </div>
           <div v-if="creationError" class="error-text">
             {{ creationError }}
           </div>
@@ -88,9 +92,10 @@
         </div>
         <div class="add-form">
           <div class="user-select-container">
-            <NcMultiselect v-model="selectedUser" :options="userOptions" :loading="isLoadingUsers" label="label"
-              track-by="id" searchable :internal-search="false" @search-change="searchUsers"
-              :placeholder="t('dtcassociations', 'Rechercher un utilisateur...')">
+            <label for="user-select">{{ t('dtcassociations', 'Ajouter un membre') }}</label>
+            <NcMultiselect id="user-select" v-model="selectedUser" :options="userOptions" :loading="isLoadingUsers"
+              label="label" track-by="id" searchable :internal-search="false" @search-change="searchUsers"
+              :placeholder="t('dtcassociations', 'Rechercher un utilisateur...')" class="add-user-select">
               <template #noOptions>
                 {{ t('dtcassociations', 'Écrivez pour rechercher') }}
               </template>
@@ -560,8 +565,8 @@ export default {
 .add-form {
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
   align-items: center;
+  margin-bottom: 20px;
 }
 
 .dtc-input {
@@ -570,6 +575,7 @@ export default {
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   box-sizing: border-box;
+  height: 45px !important;
 }
 
 .dtc-input.full-width {
@@ -578,8 +584,15 @@ export default {
 }
 
 .user-select-container {
+  display: flex;
+  flex-direction: column;
   flex-grow: 1;
   min-width: 200px;
+  gap: 6px;
+}
+
+.add-user-select {
+  width: 17rem;
 }
 
 .dtc-select {
@@ -710,12 +723,7 @@ export default {
   flex-direction: column;
 }
 
-.add-form {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 5px;
-}
+
 
 .dtc-input.input-error {
   border-color: var(--color-dtc-secondary);
@@ -805,4 +813,16 @@ export default {
   cursor: pointer;
 }
 
+.add-form-association {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 5px;
+  gap: 3px;
+  width: 100%;
+}
+
+.add-form-input-container {
+  display: flex;
+  gap: 0.5rem;
+}
 </style>
