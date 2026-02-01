@@ -1,22 +1,10 @@
 <template>
   <NcContent app-name="dtcassociations" class="app-dtcassociations">
     <NcAppNavigation slot="navigation">
-      <NcAppNavigationItem
-        id="associations"
-        name="Associations"
-        :title="t('dtcassociations', 'Associations')"
-        icon="icon-category-organization"
-        :active="!selectedAssociation"
-        @click="selectedAssociation = null"
-      />
-      <NcAppNavigationItem
-        v-if="selectedAssociation"
-        :id="'asso-' + selectedAssociation.id"
-        :name="selectedAssociation.name"
-        :title="selectedAssociation.name"
-        icon="icon-user-group"
-        :active="true"
-      />
+      <NcAppNavigationItem id="associations" name="Associations" :title="t('dtcassociations', 'Associations')"
+        icon="icon-category-organization" :active="!selectedAssociation" @click="selectedAssociation = null" />
+      <NcAppNavigationItem v-if="selectedAssociation" :id="'asso-' + selectedAssociation.id"
+        :name="selectedAssociation.name" :title="selectedAssociation.name" icon="icon-user-group" :active="true" />
     </NcAppNavigation>
 
     <NcAppContent>
@@ -25,56 +13,44 @@
 
         <div v-if="canManage" class="add-form-container">
           <div class="add-form">
-            <input
-              v-model="newAssocName"
-              type="text"
-              class="dtc-input"
-              :class="{ 'input-error': creationError }"
-              :placeholder="t('dtcassociations', 'Nom de la nouvelle association...')"
-              maxlength="50"
-              @keyup.enter="createAssociation"
-              @input="creationError = ''" 
-            />
+            <input v-model="newAssocName" type="text" class="dtc-input" :class="{ 'input-error': creationError }"
+              :placeholder="t('dtcassociations', 'Nom de la nouvelle association...')" maxlength="50"
+              @keyup.enter="createAssociation" @input="creationError = ''" />
             <NcButton type="primary" class="btn-orange" @click="createAssociation" :disabled="loading">
               {{ t('dtcassociations', 'Ajouter') }}
             </NcButton>
           </div>
-          
+
           <div v-if="creationError" class="error-text">
             {{ creationError }}
           </div>
 
           <p class="help-text">
-            {{ t('dtcassociations', 'Autorisé : Lettres, accents, chiffres, espaces, tiret, tiret du bas, apostrophe') }}
+            {{ t('dtcassociations', 'Autorisé : Lettres, accents, chiffres, espaces, tiret, tiret du bas, apostrophe')
+            }}
           </p>
         </div>
         <div v-if="loading" class="icon-loading"></div>
         <ul v-else class="association-list">
-          <li 
-            v-for="assoc in associations" 
-            :key="assoc.id" 
-            class="association-item clickable"
-            @click="selectAssociation(assoc)"
-          >
+          <li v-for="assoc in associations" :key="assoc.id" class="association-item clickable"
+            @click="selectAssociation(assoc)">
             <span class="icon-category-organization icon-white"></span>
-           <div class="info">
+            <div class="info">
               <div class="name-container">
                 <span class="name">{{ assoc.name }}</span>
-                <span class="quota-badge" :class="{'quota-warning': assoc.quota > 0 && calculatePercentage(assoc.usage, assoc.quota) > 80}">
+                <span class="quota-badge"
+                  :class="{ 'quota-warning': assoc.quota > 0 && calculatePercentage(assoc.usage, assoc.quota) > 80 }">
                   {{ formatSize(assoc.usage) }} / {{ formatQuota(assoc.quota) }}
                 </span>
               </div>
             </div>
             <NcActions :primary="true" menu-name="Actions" @click.stop>
-              <NcActionButton class="btn-orange" @click.stop="openRenameModal(assoc)" icon="icon-rename" :close-after-click="true">
+              <NcActionButton class="btn-orange" @click.stop="openRenameModal(assoc)" icon="icon-rename"
+                :close-after-click="true">
                 {{ t('dtcassociations', 'Renommer') }}
               </NcActionButton>
-              <NcActionButton 
-                v-if="canDelete"
-                @click.stop="openDeleteModal(assoc)"
-                icon="icon-delete"
-                :close-after-click="true"
-              >
+              <NcActionButton v-if="canDelete" @click.stop="openDeleteModal(assoc)" icon="icon-delete"
+                :close-after-click="true">
                 {{ t('dtcassociations', 'Supprimer') }}
               </NcActionButton>
             </NcActions>
@@ -86,40 +62,43 @@
       </div>
       <div v-else class="dtc-container">
         <div class="header-actions">
-           <NcButton @click="selectedAssociation = null" type="tertiary" icon="icon-arrow-left-active">
+          <NcButton @click="selectedAssociation = null" type="tertiary" icon="icon-arrow-left-active">
             {{ t('dtcassociations', 'Retour') }}
           </NcButton>
-          
+
           <div class="header-title-block">
-             <h2 class="app-title no-margin">{{ selectedAssociation.name }}</h2>
-             <div class="quota-detail">
-                <span class="icon-quota"></span>
-                <span class="quota-text">
-                  Utilisation : <strong>{{ formatSize(selectedAssociation.usage) }}</strong> 
-                  sur {{ formatQuota(selectedAssociation.quota) }}
-                  <span v-if="selectedAssociation.quota > 0">
-                    ({{ calculatePercentage(selectedAssociation.usage, selectedAssociation.quota) }}%)
-                  </span>
+            <h2 class="app-title no-margin">{{ selectedAssociation.name }}</h2>
+            <div class="quota-detail">
+              <span class="icon-quota"></span>
+              <span class="quota-text">
+                Utilisation : <strong>{{ formatSize(selectedAssociation.usage) }}</strong>
+                sur {{ formatQuota(selectedAssociation.quota) }}
+                <span v-if="selectedAssociation.quota > 0">
+                  ({{ calculatePercentage(selectedAssociation.usage, selectedAssociation.quota) }}%)
                 </span>
-                
-                <div class="progress-bar-bg" v-if="selectedAssociation.quota > 0">
-                   <div class="progress-bar-fill" :style="{ width: calculatePercentage(selectedAssociation.usage, selectedAssociation.quota) + '%' }"></div>
+              </span>
+
+              <div class="progress-bar-bg" v-if="selectedAssociation.quota > 0">
+                <div class="progress-bar-fill"
+                  :style="{ width: calculatePercentage(selectedAssociation.usage, selectedAssociation.quota) + '%' }">
                 </div>
-             </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="add-form">
           <div class="user-select-container">
-            <NcMultiselect
-              v-model="selectedUser"
-              :options="userOptions"
-              :loading="isLoadingUsers"
-              :placeholder="t('dtcassociations', 'Rechercher un utilisateur...')"
-              label="label"
-              track-by="id"
-              :searchable="true"
-              @search-change="searchUsers"
-            />
+            <NcMultiselect v-model="selectedUser" :options="userOptions" :loading="isLoadingUsers" label="label"
+              track-by="id" searchable :internal-search="false" @search-change="searchUsers"
+              :placeholder="t('dtcassociations', 'Rechercher un utilisateur...')">
+              <template #noOptions>
+                {{ t('dtcassociations', 'Écrivez pour rechercher') }}
+              </template>
+
+              <template #noResult>
+                {{ t('dtcassociations', 'Aucun utilisateur trouvé') }}
+              </template>
+            </NcMultiselect>
           </div>
           <select v-model="newMemberRole" class="dtc-select">
             <option value="president">Président / Vice-Président</option>
@@ -143,37 +122,34 @@
             </div>
             <div class="info edit-mode" v-else>
               <div class="user">
-              <span class="name">{{ member.user_id }}</span>
-              <select v-model="editingMemberRole" class="dtc-select-small" @click.stop>
-                <option value="president">Président / Vice-Président</option>
-                <option value="treasurer">Trésorier / Vice-Trésorier</option>
-                <option value="secretary">Secrétaire / Vice-Secrétaire</option>
-                <option value="teacher">Enseignant</option>
-                <option v-if="canManage" value="invite">Invité</option>
-                <option v-if="canDelete" value="admin_iut">Admin IUT</option>
-              </select>
+                <span class="name">{{ member.user_id }}</span>
+                <select v-model="editingMemberRole" class="dtc-select-small" @click.stop>
+                  <option value="president">Président / Vice-Président</option>
+                  <option value="treasurer">Trésorier / Vice-Trésorier</option>
+                  <option value="secretary">Secrétaire / Vice-Secrétaire</option>
+                  <option value="teacher">Enseignant</option>
+                  <option v-if="canManage" value="invite">Invité</option>
+                  <option v-if="canDelete" value="admin_iut">Admin IUT</option>
+                </select>
               </div>
               <div class="actions">
-                <NcButton type="primary" class="btn-orange" @click.stop="saveMemberRole(member)" icon="icon-checkmark">OK</NcButton>
-                <NcButton type="tertiary" class="btn-cancel" @click.stop="cancelEditMember" icon="icon-close">Annuler</NcButton>
+                <NcButton type="primary" class="btn-orange" @click.stop="saveMemberRole(member)" icon="icon-checkmark">
+                  OK
+                </NcButton>
+                <NcButton type="tertiary" class="btn-cancel" @click.stop="cancelEditMember" icon="icon-close">Annuler
+                </NcButton>
               </div>
             </div>
             <NcActions :primary="true" menu-name="Actions" v-if="editingMemberId !== member.user_id">
-              <NcActionButton 
+              <NcActionButton
                 v-if="!(member.user_id === currentUserId && (member.role === 'president' || member.role === 'admin_iut'))"
-                @click="startEditMember(member)" 
-                icon="icon-rename" 
-                :close-after-click="true"
-              >
+                @click="startEditMember(member)" icon="icon-rename" :close-after-click="true">
                 {{ t('dtcassociations', 'Modifier Rôle') }}
               </NcActionButton>
-              
-              <NcActionButton 
-                v-if="!(member.user_id === currentUserId && (member.role === 'president' || member.role === 'admin_iut'))" 
-                @click="openRemoveMemberModal(member)" 
-                icon="icon-delete" 
-                :close-after-click="true"
-              >
+
+              <NcActionButton
+                v-if="!(member.user_id === currentUserId && (member.role === 'president' || member.role === 'admin_iut'))"
+                @click="openRemoveMemberModal(member)" icon="icon-delete" :close-after-click="true">
                 {{ t('dtcassociations', 'Retirer') }}
               </NcActionButton>
             </NcActions>
@@ -185,7 +161,9 @@
       </div>
       <NcModal v-if="showDeleteModal" @close="closeDeleteModal" title="Suppression définitive" size="small">
         <div class="modal-content">
-          <p><strong>Attention :</strong> Vous êtes sur le point de supprimer l'association <em>{{ associationToDelete?.name }}</em>.</p>
+          <p><strong>Attention :</strong> Vous êtes sur le point de supprimer l'association <em>{{
+            associationToDelete?.name
+          }}</em>.</p>
           <p class="warning-text">Cette action est irréversible.</p>
         </div>
         <div class="modal-footer-custom">
@@ -196,24 +174,17 @@
       <NcModal v-if="showRenameModal" @close="closeRenameModal" title="Renommer l'association" size="small">
         <div class="modal-content">
           <p>Entrez le nouveau nom pour l'association :</p>
-          
-          <input 
-            v-model="renameInput" 
-            type="text" 
-            class="dtc-input full-width" 
-            :class="{ 'input-error': renameError }"
-            maxlength="50"
-            @keyup.enter="confirmRenameAssociation" 
-            @input="renameError = ''"
-            ref="renameInput" 
-          />
-          
+
+          <input v-model="renameInput" type="text" class="dtc-input full-width" :class="{ 'input-error': renameError }"
+            maxlength="50" @keyup.enter="confirmRenameAssociation" @input="renameError = ''" ref="renameInput" />
+
           <div v-if="renameError" class="error-text">
             {{ renameError }}
           </div>
 
           <p class="help-text" style="margin-bottom: 10px;">
-            {{ t('dtcassociations', 'Autorisé : Lettres, accents, chiffres, espaces, tiret, tiret du bas, apostrophe') }}
+            {{ t('dtcassociations', 'Autorisé : Lettres, accents, chiffres, espaces, tiret, tiret du bas, apostrophe')
+            }}
           </p>
 
           <p class="info-text">Le dossier d'équipe sera également renommé.</p>
@@ -254,7 +225,7 @@ import { generateUrl } from '@nextcloud/router';
 export default {
   name: 'App',
   components: {
-    NcContent, NcAppNavigation, NcAppNavigationItem, NcAppContent, 
+    NcContent, NcAppNavigation, NcAppNavigationItem, NcAppContent,
     NcButton, NcActions, NcActionButton, NcMultiselect, NcModal
   },
   data() {
@@ -281,7 +252,7 @@ export default {
       memberToRemove: null,
       editingMemberId: null,
       editingMemberRole: 'member',
-      
+
       isAdmin: false,
       currentUserId: '',
       canDelete: false,
@@ -290,13 +261,13 @@ export default {
   },
   mounted() {
     if (window.OC && window.OC.getCurrentUser) {
-        this.currentUserId = window.OC.getCurrentUser().uid;
+      this.currentUserId = window.OC.getCurrentUser().uid;
     }
     this.checkPermissions();
     this.fetchAssociations();
     try {
-        if (window.OC && window.OC.isUserAdmin) this.isAdmin = window.OC.isUserAdmin();
-    } catch(e) {}
+      if (window.OC && window.OC.isUserAdmin) this.isAdmin = window.OC.isUserAdmin();
+    } catch (e) { }
   },
   methods: {
     async checkPermissions() {
@@ -329,10 +300,10 @@ export default {
       // "'" (un apostrophe)
       // "_" (un underscore)
       const forbiddenPattern = /[^\p{L}0-9 _'-]/u;
-      
+
       if (forbiddenPattern.test(this.newAssocName)) {
         this.creationError = t('dtcassociations', 'Seuls les lettres, chiffres, tirets, tirets du bas, apostrophes et espaces sont autorisés.');
-        return; 
+        return;
       }
 
       this.loading = true;
@@ -341,12 +312,12 @@ export default {
         await axios.post(generateUrl('/apps/dtcassociations/api/1.0/associations'), { name: this.newAssocName, code: code });
         this.newAssocName = '';
         await this.fetchAssociations();
-      } catch (e) { 
+      } catch (e) {
         // En cas d'erreur serveur (ex: dossier existe déjà), on l'affiche aussi ici
         console.error(e);
         this.creationError = t('dtcassociations', 'Erreur lors de la création (nom déjà pris ?)');
-      } finally { 
-        this.loading = false; 
+      } finally {
+        this.loading = false;
       }
     },
     openDeleteModal(assoc) {
@@ -373,7 +344,7 @@ export default {
       this.renameInput = assoc.name;
       this.renameError = '';
       this.showRenameModal = true;
-      this.$nextTick(() => { if(this.$refs.renameInput) this.$refs.renameInput.focus(); });
+      this.$nextTick(() => { if (this.$refs.renameInput) this.$refs.renameInput.focus(); });
     },
     closeRenameModal() {
       this.showRenameModal = false;
@@ -383,13 +354,13 @@ export default {
     async confirmRenameAssociation() {
       // 1. Reset erreur
       this.renameError = '';
-      
+
       if (!this.associationToRename || !this.renameInput.trim()) return;
 
       // 2. Vérification Regex (La même que pour la création)
       // Autorise : Lettres (avec accents \p{L}), Chiffres, Espaces, Underscore, Tiret
       const forbiddenPattern = /[^\p{L}0-9 _'-]/u;
-      
+
       if (forbiddenPattern.test(this.renameInput)) {
         this.renameError = t('dtcassociations', 'Seuls les lettres, chiffres, tirets, tirets du bas, apostrophes et espaces sont autorisés.');
         return;
@@ -397,27 +368,27 @@ export default {
 
       const id = this.associationToRename.id;
       const newName = this.renameInput;
-      
+
       // On ferme pas tout de suite pour afficher l'erreur si besoin,
       // ou on peut laisser ouvert pendant le chargement.
       this.loading = true;
-      
+
       try {
         await axios.put(generateUrl(`/apps/dtcassociations/api/1.0/associations/${id}`), { name: newName });
-        
+
         await this.fetchAssociations();
         if (this.selectedAssociation?.id === id) {
-             this.selectedAssociation.name = newName;
+          this.selectedAssociation.name = newName;
         }
         // Si tout s'est bien passé, on ferme la modale
         this.showRenameModal = false;
-        
-      } catch (e) { 
+
+      } catch (e) {
         console.error(e);
         // Au lieu de l'alert, on affiche l'erreur dans la modale
         this.renameError = t('dtcassociations', 'Erreur : ce nom est peut-être déjà utilisé ou invalide.');
-      } finally { 
-        this.loading = false; 
+      } finally {
+        this.loading = false;
       }
     },
     selectAssociation(assoc) {
@@ -445,7 +416,7 @@ export default {
     async addMember() {
       if (!this.selectedUser) return;
       await this.updateMemberRoleCall(this.selectedUser.id, this.newMemberRole);
-      this.selectedUser = null; 
+      this.selectedUser = null;
     },
     startEditMember(member) {
       this.editingMemberId = member.user_id;
@@ -497,16 +468,16 @@ export default {
     },
     calculatePercentage(usage, quota) {
       // Si quota est négatif (-3 généralement), c'est illimité
-      if (quota < 0) return 0; 
+      if (quota < 0) return 0;
       if (!quota || quota === 0) return 100; // Sécurité div par zéro
-      
+
       let percent = (usage / quota) * 100;
       return Math.min(percent, 100).toFixed(1);
     },
-    
+
     formatQuota(quota) {
-       if (quota < 0) return this.t('dtcassociations', 'Illimité');
-       return this.formatSize(quota);
+      if (quota < 0) return this.t('dtcassociations', 'Illimité');
+      return this.formatSize(quota);
     },
     translateRole(role) {
       const roles = {
@@ -530,23 +501,32 @@ export default {
   font-weight: normal;
   font-style: normal;
 }
+
 :root {
   --color-dtc-primary: #282F63;
   --color-dtc-secondary: #D4451B;
   --color-dtc-text: #fff;
 }
-.app-content{ background: var(--color-dtc-primary) !important;}
-.app-dtcassociations, .app-dtcassociations * {
+
+.app-content {
+  background: var(--color-dtc-primary) !important;
+}
+
+.app-dtcassociations,
+.app-dtcassociations * {
   font-family: 'Luciole', sans-serif !important;
 }
-.button-vue--vue-primary{
+
+.button-vue--vue-primary {
   background-color: var(--color-dtc-secondary) !important;
   color: var(--color-dtc-text) !important;
 }
-.modal-container{
+
+.modal-container {
   background: var(--color-dtc-primary) !important;
   padding: 20px !important;
 }
+
 .modal-container__content {
   display: flex;
   flex-direction: column;
@@ -556,62 +536,172 @@ export default {
 </style>
 
 <style scoped>
-.app-dtcassociations { margin: 0;}
-.dtc-container { padding: 20px; }
-.app-title { color: var(--color-dtc-text); font-weight: bold; margin-bottom: 20px; }
-.header-actions { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
-.add-form { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
-.dtc-input { flex-grow: 1; padding: 10px; border: 1px solid var(--color-border); border-radius: var(--border-radius); box-sizing: border-box; }
-.dtc-input.full-width { width: 100%; margin: 10px 0; }
-.user-select-container { flex-grow: 1; min-width: 200px; }
-.dtc-select { padding: 10px; border: 1px solid var(--color-border); border-radius: var(--border-radius); background: var(--color-main-background); color: var(--color-text-main); height: 44px; }
-.dtc-select-small { padding: 5px; border: 1px solid var(--color-border); border-radius: var(--border-radius); background: var(--color-main-background); color: var(--color-text-main); margin-right: 5px; }
-.association-list { list-style: none; padding: 0; }
+.app-dtcassociations {
+  margin: 0;
+}
+
+.dtc-container {
+  padding: 20px;
+}
+
+.app-title {
+  color: var(--color-dtc-text);
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.add-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.dtc-input {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  box-sizing: border-box;
+}
+
+.dtc-input.full-width {
+  width: 100%;
+  margin: 10px 0;
+}
+
+.user-select-container {
+  flex-grow: 1;
+  min-width: 200px;
+}
+
+.dtc-select {
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-main-background);
+  color: var(--color-text-main);
+  height: 44px;
+}
+
+.dtc-select-small {
+  padding: 5px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-main-background);
+  color: var(--color-text-main);
+  margin-right: 5px;
+}
+
+.association-list {
+  list-style: none;
+  padding: 0;
+}
+
 .association-item {
-    display: flex; 
-    align-items: center; 
-    gap: 10px; 
-    padding: 15px; 
-    color: var(--color-dtc-text);
-    border-radius: var(--border-radius-large);
-    background: rgba(0, 0, 0, 0.4);
-    margin-bottom: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  color: var(--color-dtc-text);
+  border-radius: var(--border-radius-large);
+  background: rgba(0, 0, 0, 0.4);
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-.association-item.clickable { cursor: pointer; }
-.association-item.clickable:hover { opacity: 0.95; }
-.association-item .icon { font-size: 24px; opacity: 1; color: var(--color-dtc-text); }
-.association-item .icon-white { filter: brightness(0) invert(1); cursor: pointer;}
-.association-item .info { flex-grow: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-.association-item .info.edit-mode { gap: 5px; justify-content: space-between;}
-.user { display: flex; align-items: center; gap: 10px; }
-.actions { display: flex; gap: 5px; }
-.role-badge { 
-    background-color: rgba(255,255,255,0.2); 
-    color: #fff; 
-    padding: 4px 10px; 
-    border-radius: 12px; 
-    font-size: 0.85em; 
-    font-weight: bold; 
-    border: 1px solid rgba(255,255,255,0.3);
+
+.association-item.clickable {
+  cursor: pointer;
 }
-.modal-content { padding: 20px; }
-.modal-footer-custom { 
-    margin-top: 20px;
-    display: flex; 
-    justify-content: flex-end; 
-    gap: 10px; 
+
+.association-item.clickable:hover {
+  opacity: 0.95;
 }
-.warning-text { color: var(--color-dtc-secondary); margin-top: 10px; }
-.info-text { color: var(--color-text-maxcontrast); font-size: 0.9em; font-style: italic; }
+
+.association-item .icon {
+  font-size: 24px;
+  opacity: 1;
+  color: var(--color-dtc-text);
+}
+
+.association-item .icon-white {
+  filter: brightness(0) invert(1);
+  cursor: pointer;
+}
+
+.association-item .info {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.association-item .info.edit-mode {
+  gap: 5px;
+  justify-content: space-between;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.actions {
+  display: flex;
+  gap: 5px;
+}
+
+.role-badge {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: bold;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.modal-content {
+  padding: 20px;
+}
+
+.modal-footer-custom {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.warning-text {
+  color: var(--color-dtc-secondary);
+  margin-top: 10px;
+}
+
+.info-text {
+  color: var(--color-text-maxcontrast);
+  font-size: 0.9em;
+  font-style: italic;
+}
+
 ::v-deep .btn-orange {
-    background-color: var(--color-dtc-secondary) !important;
-    border-color: var(--color-dtc-secondary) !important;
-    color: #fff !important;
+  background-color: var(--color-dtc-secondary) !important;
+  border-color: var(--color-dtc-secondary) !important;
+  color: #fff !important;
 }
-::v-deep .btn-orange:hover, ::v-deep .btn-orange:focus {
-    background-color: #b83a15 !important;
-    border-color: #b83a15 !important;
+
+::v-deep .btn-orange:hover,
+::v-deep .btn-orange:focus {
+  background-color: #b83a15 !important;
+  border-color: #b83a15 !important;
 }
 
 .add-form-container {
@@ -633,7 +723,7 @@ export default {
 }
 
 .error-text {
-  color: var(--color-dtc-secondary); 
+  color: var(--color-dtc-secondary);
   font-size: 0.9em;
   font-weight: bold;
   margin-top: 2px;
@@ -672,7 +762,9 @@ export default {
   flex-direction: column;
 }
 
-.no-margin { margin: 0; }
+.no-margin {
+  margin: 0;
+}
 
 .quota-detail {
   display: flex;
@@ -697,7 +789,7 @@ export default {
 .progress-bar-bg {
   width: 100px;
   height: 6px;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -707,4 +799,5 @@ export default {
   background: var(--color-dtc-secondary);
   transition: width 0.3s ease;
 }
+
 </style>
