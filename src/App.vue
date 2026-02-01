@@ -51,11 +51,11 @@
             <NcActions :primary="true" menu-name="Actions" @click.stop>
               <NcActionButton class="btn-orange" @click.stop="openRenameModal(assoc)" icon="icon-rename"
                 :close-after-click="true">
-                {{ t('dtcassociations', 'Renommer') }}
+                {{ t('dtcassociations', 'Renommer l\'association') }}
               </NcActionButton>
               <NcActionButton v-if="canDelete" @click.stop="openDeleteModal(assoc)" icon="icon-delete"
                 :close-after-click="true">
-                {{ t('dtcassociations', 'Supprimer') }}
+                {{ t('dtcassociations', 'Supprimer l\'association') }}
               </NcActionButton>
             </NcActions>
           </li>
@@ -139,7 +139,7 @@
               </div>
               <div class="actions">
                 <NcButton type="primary" class="btn-orange" @click.stop="saveMemberRole(member)" icon="icon-checkmark">
-                  OK
+                  Valider le changement de rôle
                 </NcButton>
                 <NcButton type="tertiary" class="btn-cancel" @click.stop="cancelEditMember" icon="icon-close">Annuler
                 </NcButton>
@@ -149,13 +149,13 @@
               <NcActionButton
                 v-if="!(member.user_id === currentUserId && (member.role === 'president' || member.role === 'admin_iut'))"
                 @click="startEditMember(member)" icon="icon-rename" :close-after-click="true">
-                {{ t('dtcassociations', 'Modifier Rôle') }}
+                {{ t('dtcassociations', 'Modifier le rôle') }}
               </NcActionButton>
 
               <NcActionButton
                 v-if="!(member.user_id === currentUserId && (member.role === 'president' || member.role === 'admin_iut'))"
                 @click="openRemoveMemberModal(member)" icon="icon-delete" :close-after-click="true">
-                {{ t('dtcassociations', 'Retirer') }}
+                {{ t('dtcassociations', 'Supprimer le membre') }}
               </NcActionButton>
             </NcActions>
           </li>
@@ -196,7 +196,7 @@
         </div>
         <div class="modal-footer-custom">
           <NcButton @click="closeRenameModal">Annuler</NcButton>
-          <NcButton @click="confirmRenameAssociation" type="primary" class="btn-orange">Valider</NcButton>
+          <NcButton @click="confirmRenameAssociation" type="primary" class="btn-orange">Valider le renommage</NcButton>
         </div>
       </NcModal>
       <NcModal v-if="showRemoveMemberModal" @close="closeRemoveMemberModal" title="Retirer un membre" size="small">
@@ -206,7 +206,7 @@
         </div>
         <div class="modal-footer-custom">
           <NcButton @click="closeRemoveMemberModal">Annuler</NcButton>
-          <NcButton @click="confirmRemoveMember" type="error">Retirer</NcButton>
+          <NcButton @click="confirmRemoveMember" type="error">Supprimer le membre</NcButton>
         </div>
       </NcModal>
 
