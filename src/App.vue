@@ -49,7 +49,12 @@
             <span class="icon-category-organization icon-white"></span>
             <div class="info">
               <div class="name-container">
-                <span class="name">{{ assoc.name }}</span>
+                <div class="name-row">
+                  <span class="name">{{ assoc.name }}</span>
+                  <span v-if="assoc.member_count !== undefined" class="member-count">
+                    ({{ assoc.member_count }} {{ assoc.member_count > 1 ? 'membres' : 'membre' }})
+                  </span>
+                </div>
                 <span class="quota-badge"
                   :class="{ 'quota-warning': assoc.quota > 0 && calculatePercentage(assoc.usage, assoc.quota) > 80 }">
                   {{ formatSize(assoc.usage) }} / {{ formatQuota(assoc.quota) }}
@@ -890,4 +895,21 @@ export default {
   display: flex;
   gap: 0.5rem;
 }
+
+.name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.member-count {
+  font-size: 0.85em;
+  color: #ddd;
+  font-weight: normal;
+  font-style: italic;
+  opacity: 0.8;
+  cursor: pointer;
+}
+
 </style>

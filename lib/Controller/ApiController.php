@@ -48,7 +48,7 @@ class ApiController extends Controller
 
 	#[NoAdminRequired]
     #[NoCSRFRequired]
-    public function getAssociations(): DataResponse
+   public function getAssociations(): DataResponse
     {
         try {
             $userId = $this->getCurrentUserId();
@@ -57,11 +57,19 @@ class ApiController extends Controller
             $data = array_map(function ($assoc) {
                 $item = $assoc->jsonSerialize();
                 
-                // Récupération des stats dynamiques
+                // Récupération des stats dynamiques (Quota/Usage)
                 $stats = $this->service->getStats($assoc->getName());
+                $item['usage'] = $stats['usage'];
+                $item['quota'] = $stats['quota'];
                 
-                $item['usage'] = $stats['usage']; // Octets utilisés
-                $item['quota'] = $stats['quota']; // Octets max (-3 si illimité)
+				//compter les membres
+                try {
+                    // on récupère la liste des membres pour cette association
+                    $members = $this->service->getMembers($assoc->getId());
+                    $item['member_count'] = count($members);
+                } catch (\Exception $e) {
+                    $item['member_count'] = 0;
+                }
                 
                 return $item;
             }, $associations);
