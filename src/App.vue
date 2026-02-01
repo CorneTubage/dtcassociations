@@ -749,6 +749,7 @@ export default {
   color: white;
   opacity: 0.9;
   margin-top: 2px;
+  cursor: pointer;
 }
 
 .quota-badge.quota-warning {
@@ -798,6 +799,10 @@ export default {
   height: 100%;
   background: var(--color-dtc-secondary);
   transition: width 0.3s ease;
+}
+
+.name {
+  cursor: pointer;
 }
 
 </style>
