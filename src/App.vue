@@ -17,8 +17,12 @@
       </transition>
 
       <div v-if="!selectedAssociation" class="dtc-container">
-        <h2 class="app-title">{{ t('dtcassociations', 'Gestion Associations') }}</h2>
-
+        <div class="header-title-row">
+          <h2 class="app-title no-margin">{{ t('dtcassociations', 'Gestion Associations') }}</h2>
+          <span v-if="!loading && associations.length > 0" class="association-counter">
+            {{ associations.length }} {{ associations.length > 1 ? t('dtcassociations', 'associations présentes') : t('dtcassociations', 'association présente') }}
+          </span>
+        </div>
         <div v-if="canManage" class="add-form-container">
           <div class="add-form-association">
             <label for="newAssocName">{{ t('dtcassociations', 'Création d\'une association') }}</label>
@@ -625,6 +629,20 @@ export default {
   margin-bottom: 20px;
 }
 
+.header-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.association-counter {
+  font-size: 0.9em;
+  color: #ddd;
+  font-weight: normal;
+  font-style: italic;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -788,12 +806,10 @@ export default {
 }
 
 .add-form-container {
-  margin-bottom: 20px;
+  margin: 30px 0; 
   display: flex;
   flex-direction: column;
 }
-
-
 
 .dtc-input.input-error {
   border-color: var(--color-dtc-secondary);
@@ -908,7 +924,6 @@ export default {
   color: #ddd;
   font-weight: normal;
   font-style: italic;
-  opacity: 0.8;
   cursor: pointer;
 }
 
