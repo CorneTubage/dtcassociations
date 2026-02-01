@@ -8,6 +8,14 @@
     </NcAppNavigation>
 
     <NcAppContent>
+      <transition name="fade">
+        <div v-if="notification.message" class="dtc-toast" :class="'toast-' + notification.type">
+          <span :class="notification.type === 'error' ? 'icon-error' : 'icon-checkmark-white'"></span>
+          <span class="toast-message">{{ notification.message }}</span>
+          <span class="icon-close toast-close" @click="closeNotification"></span>
+        </div>
+      </transition>
+
       <div v-if="!selectedAssociation" class="dtc-container">
         <h2 class="app-title">{{ t('dtcassociations', 'Gestion Associations') }}</h2>
 
@@ -261,7 +269,14 @@ export default {
       isAdmin: false,
       currentUserId: '',
       canDelete: false,
-      canManage: false
+      canManage: false,
+
+      // Système de notification
+      notification: {
+        message: '',
+        type: 'error' // 'error' ou 'success'
+      },
+      notificationTimeout: null
     };
   },
   mounted() {
@@ -275,12 +290,25 @@ export default {
     } catch (e) { }
   },
   methods: {
+    // Méthode pour afficher les notifications
+    showNotification(message, type = 'error') {
+      if (this.notificationTimeout) clearTimeout(this.notificationTimeout);
+      this.notification = { message, type };
+      this.notificationTimeout = setTimeout(() => {
+        this.closeNotification();
+      }, 5000);
+    },
+    closeNotification() {
+      this.notification.message = '';
+      if (this.notificationTimeout) clearTimeout(this.notificationTimeout);
+    },
+
     async checkPermissions() {
       try {
         const response = await axios.get(generateUrl('/apps/dtcassociations/api/1.0/user/permissions'));
         this.canDelete = response.data.canDelete;
         this.canManage = response.data.canManage;
-      } catch (e) { this.canDelete = false; this.canManage = false; }
+      } catch { this.canDelete = false; this.canManage = false; }
     },
     async fetchAssociations() {
       this.loading = true;
@@ -290,22 +318,10 @@ export default {
       } catch (e) { console.error(e); } finally { this.loading = false; }
     },
     async createAssociation() {
-      // 1. Réinitialiser l'erreur
       this.creationError = '';
-
       if (!this.newAssocName.trim()) return;
 
-      // 2. Vérification stricte
-      // La regex cherche tout caractère qui N'EST PAS (^) :
-      // a-z (lettres minuscules sans accent)
-      // A-Z (lettres majuscules sans accent)
-      // 0-9 (chiffres)
-      // " " (un espace)
-      // "-" (un tiret)
-      // "'" (un apostrophe)
-      // "_" (un underscore)
       const forbiddenPattern = /[^\p{L}0-9 _'-]/u;
-
       if (forbiddenPattern.test(this.newAssocName)) {
         this.creationError = t('dtcassociations', 'Seuls les lettres, chiffres, tirets, tirets du bas, apostrophes et espaces sont autorisés.');
         return;
@@ -317,8 +333,8 @@ export default {
         await axios.post(generateUrl('/apps/dtcassociations/api/1.0/associations'), { name: this.newAssocName, code: code });
         this.newAssocName = '';
         await this.fetchAssociations();
+        this.showNotification(t('dtcassociations', 'Association créée avec succès'), 'success');
       } catch (e) {
-        // En cas d'erreur serveur (ex: dossier existe déjà), on l'affiche aussi ici
         console.error(e);
         this.creationError = t('dtcassociations', 'Erreur lors de la création (nom déjà pris ?)');
       } finally {
@@ -342,7 +358,10 @@ export default {
         await axios.delete(generateUrl(`/apps/dtcassociations/api/1.0/associations/${id}`));
         if (this.selectedAssociation?.id === id) this.selectedAssociation = null;
         await this.fetchAssociations();
-      } catch (e) { alert(t('dtcassociations', 'Erreur suppression')); } finally { this.loading = false; }
+        this.showNotification(t('dtcassociations', 'Association supprimée avec succès'), 'success');
+      } catch {
+        this.showNotification(t('dtcassociations', 'Erreur lors de la suppression de l\'association'), 'error');
+      } finally { this.loading = false; }
     },
     openRenameModal(assoc) {
       this.associationToRename = assoc;
@@ -357,15 +376,10 @@ export default {
       this.renameInput = '';
     },
     async confirmRenameAssociation() {
-      // 1. Reset erreur
       this.renameError = '';
-
       if (!this.associationToRename || !this.renameInput.trim()) return;
 
-      // 2. Vérification Regex (La même que pour la création)
-      // Autorise : Lettres (avec accents \p{L}), Chiffres, Espaces, Underscore, Tiret
       const forbiddenPattern = /[^\p{L}0-9 _'-]/u;
-
       if (forbiddenPattern.test(this.renameInput)) {
         this.renameError = t('dtcassociations', 'Seuls les lettres, chiffres, tirets, tirets du bas, apostrophes et espaces sont autorisés.');
         return;
@@ -373,24 +387,18 @@ export default {
 
       const id = this.associationToRename.id;
       const newName = this.renameInput;
-
-      // On ferme pas tout de suite pour afficher l'erreur si besoin,
-      // ou on peut laisser ouvert pendant le chargement.
       this.loading = true;
 
       try {
         await axios.put(generateUrl(`/apps/dtcassociations/api/1.0/associations/${id}`), { name: newName });
-
         await this.fetchAssociations();
         if (this.selectedAssociation?.id === id) {
           this.selectedAssociation.name = newName;
         }
-        // Si tout s'est bien passé, on ferme la modale
         this.showRenameModal = false;
-
+        this.showNotification(t('dtcassociations', 'Association renommée avec succès'), 'success');
       } catch (e) {
         console.error(e);
-        // Au lieu de l'alert, on affiche l'erreur dans la modale
         this.renameError = t('dtcassociations', 'Erreur : ce nom est peut-être déjà utilisé ou invalide.');
       } finally {
         this.loading = false;
@@ -420,7 +428,7 @@ export default {
     },
     async addMember() {
       if (!this.selectedUser) return;
-      await this.updateMemberRoleCall(this.selectedUser.id, this.newMemberRole);
+      await this.updateMemberRoleCall(this.selectedUser.id, this.newMemberRole, true);
       this.selectedUser = null;
     },
     startEditMember(member) {
@@ -432,18 +440,21 @@ export default {
     },
     async saveMemberRole(member) {
       if (this.editingMemberRole !== member.role) {
-        await this.updateMemberRoleCall(member.user_id, this.editingMemberRole);
+        await this.updateMemberRoleCall(member.user_id, this.editingMemberRole, false);
       }
       this.cancelEditMember();
     },
-    async updateMemberRoleCall(userId, role) {
+    async updateMemberRoleCall(userId, role, isAdd) {
       this.membersLoading = true;
       try {
         await axios.post(generateUrl(`/apps/dtcassociations/api/1.0/associations/${this.selectedAssociation.id}/members`), {
           userId: userId, role: role
         });
         await this.fetchMembers();
-      } catch (e) { alert(t('dtcassociations', "Erreur sauvegarde")); } finally { this.membersLoading = false; }
+        this.showNotification(isAdd ? t('dtcassociations', 'Membre ajouté avec succès') : t('dtcassociations', 'Rôle mis à jour'), 'success');
+      } catch {
+        this.showNotification(t('dtcassociations', 'Erreur lors de la sauvegarde'), 'error');
+      } finally { this.membersLoading = false; }
     },
     openRemoveMemberModal(member) {
       this.memberToRemove = member;
@@ -461,7 +472,10 @@ export default {
       try {
         await axios.delete(generateUrl(`/apps/dtcassociations/api/1.0/associations/${this.selectedAssociation.id}/members/${userId}`));
         await this.fetchMembers();
-      } catch (e) { alert(t('dtcassociations', 'Erreur suppression')); } finally { this.membersLoading = false; }
+        this.showNotification(t('dtcassociations', 'Membre retiré avec succès'), 'success');
+      } catch {
+        this.showNotification(t('dtcassociations', 'Erreur lors de la suppression du membre'), 'error');
+      } finally { this.membersLoading = false; }
     },
     formatSize(bytes) {
       if (bytes === undefined || bytes === null) return '0 B';
@@ -472,14 +486,11 @@ export default {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     },
     calculatePercentage(usage, quota) {
-      // Si quota est négatif (-3 généralement), c'est illimité
       if (quota < 0) return 0;
-      if (!quota || quota === 0) return 100; // Sécurité div par zéro
-
+      if (!quota || quota === 0) return 100;
       let percent = (usage / quota) * 100;
       return Math.min(percent, 100).toFixed(1);
     },
-
     formatQuota(quota) {
       if (quota < 0) return this.t('dtcassociations', 'Illimité');
       return this.formatSize(quota);
@@ -541,6 +552,60 @@ export default {
 </style>
 
 <style scoped>
+/* Toast Notification Styles */
+.dtc-toast {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  z-index: 10000;
+  padding: 12px 20px;
+  border-radius: var(--border-radius-large);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-weight: bold;
+  max-width: 400px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dtc-toast.toast-error {
+  background-color: var(--color-dtc-secondary);
+}
+
+.dtc-toast.toast-success {
+  background-color: #46ba61;
+}
+
+.toast-message {
+  flex-grow: 1;
+  font-size: 0.95em;
+}
+
+.toast-close {
+  cursor: pointer;
+  opacity: 0.8;
+  font-size: 1.2em;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.4s, transform 0.4s;
+}
+
+.fade-enter,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+
 .app-dtcassociations {
   margin: 0;
 }
