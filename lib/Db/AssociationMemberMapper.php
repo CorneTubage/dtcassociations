@@ -15,10 +15,6 @@ class AssociationMemberMapper extends QBMapper
         parent::__construct($db, 'dtc_asso_members', AssociationMember::class);
     }
 
-    /**
-     * Trouve un membre spécifique
-     * @throws \OCP\AppFramework\Db\DoesNotExistException
-     */
     public function getMember(string $userId, string $groupId): AssociationMember
     {
         $qb = $this->db->getQueryBuilder();
@@ -31,10 +27,6 @@ class AssociationMemberMapper extends QBMapper
         return $this->findEntity($qb);
     }
 
-    /**
-     * Récupère tous les membres d'une association
-     * @return AssociationMember[]
-     */
     public function getAssociationMembers(string $groupId): array
     {
         $qb = $this->db->getQueryBuilder();
@@ -46,10 +38,6 @@ class AssociationMemberMapper extends QBMapper
         return $this->findEntities($qb);
     }
 
-    /**
-     * Récupère les associations d'un utilisateur
-     * @return AssociationMember[]
-     */
     public function getUserAssociations(string $userId): array
     {
         $qb = $this->db->getQueryBuilder();
@@ -61,9 +49,6 @@ class AssociationMemberMapper extends QBMapper
         return $this->findEntities($qb);
     }
 
-    /**
-     * Supprime tous les membres d'une association (Nettoyage)
-     */
     public function deleteByGroup(string $groupId): void
     {
         $qb = $this->db->getQueryBuilder();

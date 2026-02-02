@@ -283,10 +283,9 @@ export default {
       canDelete: false,
       canManage: false,
 
-      // Système de notification
       notification: {
         message: '',
-        type: 'error' // 'error' ou 'success'
+        type: 'error'
       },
       notificationTimeout: null
     };
@@ -302,7 +301,6 @@ export default {
     } catch (e) { }
   },
   methods: {
-    // Méthode pour afficher les notifications
     showNotification(message, type = 'error') {
       if (this.notificationTimeout) clearTimeout(this.notificationTimeout);
       this.notification = { message, type };
@@ -472,10 +470,8 @@ export default {
         const errorMessage = e.response?.data?.error || e.response?.data?.message;
         
         if (errorMessage) {
-            // Si le serveur a envoyé un message précis (ex: "Déjà président ailleurs")
             this.showNotification(errorMessage, 'error');
         } else {
-            // Si on n'a rien reçu de précis, on garde le message de secours
             this.showNotification(t('dtcassociations', 'Erreur lors de la sauvegarde'), 'error');
         }
     } finally { 
@@ -578,7 +574,6 @@ export default {
 </style>
 
 <style scoped>
-/* Toast Notification Styles */
 .dtc-toast {
   position: fixed;
   top: 60px;
@@ -619,7 +614,6 @@ export default {
   opacity: 1;
 }
 
-/* Transitions */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.4s, transform 0.4s;

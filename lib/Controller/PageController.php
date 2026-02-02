@@ -12,9 +12,6 @@ use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\TemplateResponse;
 
-/**
- * @psalm-suppress UnusedClass
- */
 class PageController extends Controller
 {
 	#[NoCSRFRequired]

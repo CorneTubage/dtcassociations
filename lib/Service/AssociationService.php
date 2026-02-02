@@ -74,15 +74,12 @@ class AssociationService
         }
 
         try {
-            // on cherche si une association a DEJA ce nom
             $existing = $this->associationMapper->findByName($name);
             
-            // si on en trouve une ET que ce n'est pas celle qu'on est en train de modifier
             if ($existing->getId() !== $id) {
                 throw new Exception("Une association portant le nom '$name' existe déjà.");
             }
         } catch (DoesNotExistException $e) {
-            // si elle n'existe pas, c'est parfait, on continue !
         }
 
         try {
@@ -97,7 +94,6 @@ class AssociationService
                 try {
                     $this->gfService->renameFolder($oldName, $name);
                 } catch (\Throwable $e) {
-                    // On log l'erreur si besoin, mais on ne bloque pas
                 }
             }
 

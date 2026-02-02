@@ -17,7 +17,6 @@ class Version010000Date20250101 extends SimpleMigrationStep
         /** @var ISchemaWrapper $schema */
         $schema = $schemaClosure();
 
-        // Table des Associations
         if (!$schema->hasTable('dtc_associations')) {
             $table = $schema->createTable('dtc_associations');
             $table->addColumn('id', 'integer', [
@@ -36,7 +35,6 @@ class Version010000Date20250101 extends SimpleMigrationStep
             $table->addUniqueIndex(['code'], 'dtc_associations_code_idx');
         }
 
-        // Table des Membres
         if (!$schema->hasTable('dtc_asso_members')) {
             $table = $schema->createTable('dtc_asso_members');
             $table->addColumn('id', 'integer', [

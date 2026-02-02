@@ -17,10 +17,7 @@ class AssociationMapper extends QBMapper
         parent::__construct($db, 'dtc_associations', Association::class);
     }
 
-    /**
-     * Récupère une association par son ID
-     * @throws DoesNotExistException
-     */
+    
     public function find(int $id): Association
     {
         $qb = $this->db->getQueryBuilder();
@@ -30,9 +27,6 @@ class AssociationMapper extends QBMapper
         return $this->findEntity($qb);
     }
 
-    /**
-     * Trouve une association par son code
-     */
     public function findByCode(string $code): Association
     {
         $qb = $this->db->getQueryBuilder();
@@ -41,10 +35,7 @@ class AssociationMapper extends QBMapper
             ->where($qb->expr()->eq('code', $qb->createNamedParameter($code)));
         return $this->findEntity($qb);
     }
-
-    /**
-     * Trouve plusieurs associations par leur code (Filtrage)
-     */
+    
     public function findByCodes(array $codes): array
     {
         if (empty($codes)) {
@@ -66,10 +57,6 @@ class AssociationMapper extends QBMapper
         return $this->findEntities($qb);
     }
 
-    /**
-     * Trouve une association par son nom (notamment pour éviter les doublons au renommage)
-     * @throws DoesNotExistException
-     */
     public function findByName(string $name): Association
     {
         $qb = $this->db->getQueryBuilder();

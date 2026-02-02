@@ -9,7 +9,7 @@ use OCP\IUserManager;
 use OCP\Files\IRootFolder;
 use OCP\Files\Folder;
 use OCP\Constants;
-use Psr\Log\LoggerInterface; // CORRECTION : Standard PSR-3 obligatoire NC 32
+use Psr\Log\LoggerInterface;
 use OCP\App\IAppManager;
 
 class GroupFolderService
@@ -54,11 +54,8 @@ class GroupFolderService
         return \OC::$server->get($className);
     }
 
-    // --- GESTION GROUPES GLOBAUX ---
-
     public function ensureGlobalGroupsExist(): void
     {
-        // CORRECTION : Groupes en FRANÇAIS pour matcher AssociationService
         $groups = ['president', 'tresorier', 'secretaire', 'enseignent', 'admin_iut', 'invite'];
         foreach ($groups as $gid) {
             if (!$this->groupManager->groupExists($gid)) {
@@ -69,7 +66,6 @@ class GroupFolderService
 
     public function updateUserGlobalGroup(string $userId, string $groupName, bool $shouldBeIn): void
     {
-        // CORRECTION : Vérification avec les noms français
         if (!in_array($groupName, ['president', 'tresorier', 'secretaire', 'enseignent', 'admin_iut', 'invite'])) {
             return;
         }
@@ -87,8 +83,6 @@ class GroupFolderService
             $group->removeUser($user);
         }
     }
-
-    // --- STRUCTURE ---
 
     public function ensureAssociationStructure(string $assoName): int
     {
@@ -328,10 +322,8 @@ class GroupFolderService
             return;
         }
 
-        // A. RACINE : Lecture seule (Protège la structure)
         $this->setRule($rm, $mapping, $rootNode->getId(), Constants::PERMISSION_READ);
 
-        // B. ARCHIVE
         if ($rootNode->nodeExists('archive')) {
             $archiveId = $rootNode->get('archive')->getId();
             $archivePerms = Constants::PERMISSION_READ;
@@ -341,22 +333,17 @@ class GroupFolderService
             $this->setRule($rm, $mapping, $archiveId, $archivePerms);
         }
 
-        // C. OFFICIEL
         if ($rootNode->nodeExists('officiel')) {
             $officiel = $rootNode->get('officiel');
-            // Lecture seule sur le dossier 'officiel'
             $this->setRule($rm, $mapping, $officiel->getId(), Constants::PERMISSION_READ);
 
-            // Permissions : Enseignant/Invité = Lecture Seule, Autres = Total
             $isReadOnlyRole = ($role === 'teacher' || $role === 'invite' || $role === 'enseignent');
             $writePerms = $isReadOnlyRole ? Constants::PERMISSION_READ : Constants::PERMISSION_ALL;
 
-            // 1. Autres
             if ($officiel->nodeExists('Autres')) {
                 $this->setRule($rm, $mapping, $officiel->get('Autres')->getId(), $writePerms);
             }
 
-            // 2. Papiers Officiels
             if ($officiel->nodeExists('Papiers officiels de l\'association')) {
                 $papiers = $officiel->get('Papiers officiels de l\'association');
                 $this->setRule($rm, $mapping, $papiers->getId(), Constants::PERMISSION_READ);
@@ -368,7 +355,6 @@ class GroupFolderService
                 }
             }
 
-            // 3. Comptes (Tout le monde accède en écriture sauf Enseignants/Invités)
             if ($officiel->nodeExists('Comptes')) {
                 $comptes = $officiel->get('Comptes');
                 $this->setRule($rm, $mapping, $comptes->getId(), $writePerms);
@@ -380,7 +366,6 @@ class GroupFolderService
                 }
             }
 
-            // 4. Rendus
             if ($officiel->nodeExists('Rendus')) {
                 $rendus = $officiel->get('Rendus');
                 $this->setRule($rm, $mapping, $rendus->getId(), Constants::PERMISSION_READ);
@@ -410,37 +395,27 @@ class GroupFolderService
         }
     }
 
-    /**
-     * Retourne un tableau ['usage' => int, 'quota' => int]
-     * Quota -3 = illimité
-     */
     public function getFolderStats(string $assoName): array
     {
-        $stats = ['usage' => 0, 'quota' => -3]; // -3 est le code par défaut pour illimité dans GroupFolders
+        $stats = ['usage' => 0, 'quota' => -3];
 
         try {
-            // 1. Récupérer l'USAGE RÉEL (via le système de fichiers)
             $userFolder = $this->rootFolder->getUserFolder('admin');
             if ($userFolder->nodeExists($assoName)) {
                 $node = $userFolder->get($assoName);
                 $stats['usage'] = $node->getSize();
             }
 
-            // 2. Récupérer le QUOTA CONFIGURÉ (via FolderManager)
             $fm = $this->getService('OCA\GroupFolders\Folder\FolderManager');
             $allFolders = $fm->getAllFolders();
-            
+
             foreach ($allFolders as $folder) {
-                // Gestion compatibilité versions (objet ou tableau)
                 $mountPoint = is_string($folder) ? $folder : $folder->mountPoint;
-                
+
                 if ($mountPoint === $assoName) {
-                    // Si c'est un objet (versions récentes)
                     if (method_exists($folder, 'getQuota')) {
                         $stats['quota'] = $folder->getQuota();
-                    } 
-                    // Si c'est une propriété publique (anciennes versions)
-                    elseif (isset($folder->quota)) {
+                    } elseif (isset($folder->quota)) {
                         $stats['quota'] = $folder->quota;
                     }
                     break;

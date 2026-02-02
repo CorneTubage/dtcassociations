@@ -61,14 +61,11 @@ class ApiController extends Controller
             $data = array_map(function ($assoc) {
                 $item = $assoc->jsonSerialize();
                 
-                // Récupération des stats dynamiques (Quota/Usage)
                 $stats = $this->service->getStats($assoc->getName());
                 $item['usage'] = $stats['usage'];
                 $item['quota'] = $stats['quota'];
                 
-				//compter les membres
                 try {
-                    // on récupère la liste des membres pour cette association
                     $members = $this->service->getMembers($assoc->getId());
                     $item['member_count'] = count($members);
                 } catch (\Exception $e) {
@@ -141,15 +138,11 @@ class ApiController extends Controller
 		}
 	}
 
-	/**
-     * Helper pour formater un membre avec son nom d'affichage
-     */
     private function formatMember($member) {
         $data = $member->jsonSerialize();
         $userId = $member->getUserId();
         $user = $this->userManager->get($userId);
         
-        // Si l'utilisateur existe, on prend son nom complet, sinon on garde l'ID
         $data['display_name'] = $user ? $user->getDisplayName() : $userId;
         
         return $data;
