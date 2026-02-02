@@ -457,17 +457,31 @@ export default {
       this.cancelEditMember();
     },
     async updateMemberRoleCall(userId, role, isAdd) {
-      this.membersLoading = true;
-      try {
+    this.membersLoading = true;
+    try {
         await axios.post(generateUrl(`/apps/dtcassociations/api/1.0/associations/${this.selectedAssociation.id}/members`), {
-          userId: userId, role: role
+            userId: userId, 
+            role: role
         });
         await this.fetchMembers();
-        this.showNotification(isAdd ? t('dtcassociations', 'Membre ajouté avec succès') : t('dtcassociations', 'Rôle mis à jour'), 'success');
-      } catch {
-        this.showNotification(t('dtcassociations', 'Erreur lors de la sauvegarde'), 'error');
-      } finally { this.membersLoading = false; }
-    },
+        this.showNotification(
+            isAdd ? t('dtcassociations', 'Membre ajouté avec succès') : t('dtcassociations', 'Rôle mis à jour'), 
+            'success'
+        );
+    } catch (e) {
+        const errorMessage = e.response?.data?.error || e.response?.data?.message;
+        
+        if (errorMessage) {
+            // Si le serveur a envoyé un message précis (ex: "Déjà président ailleurs")
+            this.showNotification(errorMessage, 'error');
+        } else {
+            // Si on n'a rien reçu de précis, on garde le message de secours
+            this.showNotification(t('dtcassociations', 'Erreur lors de la sauvegarde'), 'error');
+        }
+    } finally { 
+        this.membersLoading = false; 
+    }
+},
     openRemoveMemberModal(member) {
       this.memberToRemove = member;
       this.showRemoveMemberModal = true;
