@@ -9,6 +9,7 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
+use OCP\IUserManager;
 use OCP\IUserSession;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
@@ -18,16 +19,19 @@ class ApiController extends Controller
 
 	private AssociationService $service;
 	private IUserSession $userSession;
+	private IUserManager $userManager;
 
 	public function __construct(
 		string $appName,
 		IRequest $request,
 		AssociationService $service,
-		IUserSession $userSession
+		IUserSession $userSession,
+		IUserManager $userManager
 	) {
 		parent::__construct($appName, $request);
 		$this->service = $service;
 		$this->userSession = $userSession;
+		$this->userManager = $userManager;
 	}
 
 	private function getCurrentUserId(): string
@@ -137,32 +141,46 @@ class ApiController extends Controller
 		}
 	}
 
+	/**
+     * Helper pour formater un membre avec son nom d'affichage
+     */
+    private function formatMember($member) {
+        $data = $member->jsonSerialize();
+        $userId = $member->getUserId();
+        $user = $this->userManager->get($userId);
+        
+        // Si l'utilisateur existe, on prend son nom complet, sinon on garde l'ID
+        $data['display_name'] = $user ? $user->getDisplayName() : $userId;
+        
+        return $data;
+    }
+
 	#[NoAdminRequired]
-	#[NoCSRFRequired]
-	public function getMembers(int $id): DataResponse
-	{
-		try {
-			$members = $this->service->getMembers($id);
-			$data = array_map(function ($m) {
-				return $m->jsonSerialize();
-			}, $members);
-			return new DataResponse($data);
-		} catch (\Exception $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		}
-	}
+    #[NoCSRFRequired]
+    public function getMembers(int $id): DataResponse
+    {
+        try {
+            $members = $this->service->getMembers($id);
+            $data = array_map(function ($m) {
+                return $this->formatMember($m);
+            }, $members);
+            return new DataResponse($data);
+        } catch (\Exception $e) {
+            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+        }
+    }
 
 	#[NoAdminRequired]
 	public function addMember(int $id, string $userId, string $role): DataResponse
-	{
-		try {
-			$actorId = $this->getCurrentUserId();
-			$member = $this->service->addMember($id, $userId, $role, $actorId);
-			return new DataResponse($member->jsonSerialize());
-		} catch (\Exception $e) {
-			return new DataResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
-		}
-	}
+    {
+        try {
+            $actorId = $this->getCurrentUserId();
+            $member = $this->service->addMember($id, $userId, $role, $actorId);
+            return new DataResponse($this->formatMember($member));
+        } catch (\Exception $e) {
+            return new DataResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
+        }
+    }
 
 	#[NoAdminRequired]
 	public function removeMember(int $id, string $userId): DataResponse

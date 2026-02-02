@@ -20,7 +20,8 @@
         <div class="header-title-row">
           <h2 class="app-title no-margin">{{ t('dtcassociations', 'Gestion Associations') }}</h2>
           <span v-if="!loading && associations.length > 0" class="association-counter">
-            {{ associations.length }} {{ associations.length > 1 ? t('dtcassociations', 'associations présentes') : t('dtcassociations', 'association présente') }}
+            {{ associations.length }} {{ associations.length > 1 ? t('dtcassociations', 'associations présentes') :
+              t('dtcassociations', 'association présente') }}
           </span>
         </div>
         <div v-if="canManage" class="add-form-container">
@@ -139,12 +140,12 @@
           <li v-for="member in members" :key="member.id" class="association-item">
             <span class="icon-user icon-white"></span>
             <div class="info" v-if="editingMemberId !== member.user_id">
-              <span class="name">{{ member.user_id }}</span>
+              <span class="name" :title="member.user_id">{{ member.display_name || member.user_id }}</span>
               <span class="role-badge">{{ translateRole(member.role) }}</span>
             </div>
             <div class="info edit-mode" v-else>
               <div class="user">
-                <span class="name">{{ member.user_id }}</span>
+                <span class="name" :title="member.user_id">{{ member.display_name || member.user_id }}</span>
                 <select v-model="editingMemberRole" class="dtc-select-small" @click.stop>
                   <option value="president">Président / Vice-Président</option>
                   <option value="treasurer">Trésorier / Vice-Trésorier</option>
@@ -185,7 +186,7 @@
         <div class="modal-content">
           <p><strong>Attention :</strong> Vous êtes sur le point de supprimer l'association <em>{{
             associationToDelete?.name
-          }}</em>.</p>
+              }}</em>.</p>
           <p class="warning-text">Cette action est irréversible.</p>
         </div>
         <div class="modal-footer-custom">
@@ -218,7 +219,9 @@
       </NcModal>
       <NcModal v-if="showRemoveMemberModal" @close="closeRemoveMemberModal" title="Retirer un membre" size="small">
         <div class="modal-content">
-          <p>Voulez-vous vraiment retirer <strong>{{ memberToRemove?.user_id }}</strong> de cette association ?</p>
+          <p>Voulez-vous vraiment retirer <strong>{{ memberToRemove?.display_name || memberToRemove?.user_id }}</strong>
+            de
+            cette association ?</p>
           <p class="warning-text">Il perdra l'accès au dossier d'équipe.</p>
         </div>
         <div class="modal-footer-custom">
@@ -806,7 +809,7 @@ export default {
 }
 
 .add-form-container {
-  margin: 30px 0; 
+  margin: 30px 0;
   display: flex;
   flex-direction: column;
 }
@@ -926,5 +929,4 @@ export default {
   font-style: italic;
   cursor: pointer;
 }
-
 </style>
