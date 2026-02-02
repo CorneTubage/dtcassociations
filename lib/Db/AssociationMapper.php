@@ -65,4 +65,18 @@ class AssociationMapper extends QBMapper
         $qb->select('*')->from($this->tableName);
         return $this->findEntities($qb);
     }
+
+    /**
+     * Trouve une association par son nom (notamment pour éviter les doublons au renommage)
+     * @throws DoesNotExistException
+     */
+    public function findByName(string $name): Association
+    {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('*')
+            ->from($this->tableName)
+            ->where($qb->expr()->eq('name', $qb->createNamedParameter($name)));
+
+        return $this->findEntity($qb);
+    }
 }
