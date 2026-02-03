@@ -110,12 +110,12 @@ export default {
         .toString()
         .toLowerCase()
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "-")
+        .replace(/[\u0300-\u036f]/g, "")
         .replace(/\s+/g, "-")
         .replace(/[^\w_]+/g, "-")
         .replace(/__+/g, "-")
-        .replace(/^_+/, "-")
-        .replace(/_+$/, "-");
+        .replace(/^_+/, "")
+        .replace(/_+$/, "");
     },
 
     handlePopState(event) {
