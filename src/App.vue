@@ -63,11 +63,11 @@
         <ul v-else class="association-list">
           <li v-for="assoc in associations" :key="assoc.id" class="association-item clickable"
           @click="selectAssociation(assoc)">
-            <span class="icon-category-organization icon-white"></span>
-            <div class="info">
+            <span class="icon-category-organization icon-white asso"></span>
+            <div class="info asso">
               <div class="name-container">
                 <div class="name-row">
-                  <span class="name">{{ assoc.name }}</span>
+                  <span class="name asso">{{ assoc.name }}</span>
                   <span v-if="assoc.member_count !== undefined" class="member-count">
                     ({{ assoc.member_count }} {{ assoc.member_count > 1 ? 'membres' : 'membre' }})
                   </span>

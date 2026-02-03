@@ -194,10 +194,12 @@
 
 .association-item.clickable {
   cursor: pointer;
+  border: 1px solid transparent;
 }
 
 .association-item.clickable:hover {
   opacity: 0.95;
+  border-color: grey;
 }
 
 .association-item .icon {
@@ -208,6 +210,9 @@
 
 .association-item .icon-white {
   filter: brightness(0) invert(1);
+}
+
+.association-item .icon-white.asso {
   cursor: pointer;
 }
 
@@ -216,6 +221,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.association-item .info.asso {
   cursor: pointer;
 }
 
@@ -310,6 +318,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  cursor: pointer;
 }
 
 .quota-badge {
@@ -369,7 +378,7 @@
   transition: width 0.3s ease;
 }
 
-.name {
+.name.asso {
   cursor: pointer;
 }
 
@@ -391,6 +400,7 @@
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
+  cursor: pointer;
 }
 
 .member-count {
