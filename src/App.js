@@ -81,7 +81,6 @@ export default {
     if (lastPart && lastPart !== "dtcassociations") {
       const decodedName = decodeURIComponent(lastPart);
 
-      // Recherche améliorée : Code, Nom, Slug du nom, ou ID
       const found =
         this.associations.find((a) => a.code === lastPart) ||
         this.associations.find((a) => a.name === decodedName) ||
@@ -111,12 +110,12 @@ export default {
         .toString()
         .toLowerCase()
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/\s+/g, "_")
-        .replace(/[^\w_]+/g, "")
-        .replace(/__+/g, "_")
-        .replace(/^_+/, "")
-        .replace(/_+$/, "");
+        .replace(/[\u0300-\u036f]/g, "-")
+        .replace(/\s+/g, "-")
+        .replace(/[^\w_]+/g, "-")
+        .replace(/__+/g, "-")
+        .replace(/^_+/, "-")
+        .replace(/_+$/, "-");
     },
 
     handlePopState(event) {
