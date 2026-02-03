@@ -1,10 +1,22 @@
 <template>
   <NcContent app-name="dtcassociations" class="app-dtcassociations">
     <NcAppNavigation slot="navigation">
-      <NcAppNavigationItem id="associations" name="Associations" :title="t('dtcassociations', 'Associations')"
-        icon="icon-category-organization" :active="!selectedAssociation" @click="selectedAssociation = null" />
-      <NcAppNavigationItem v-if="selectedAssociation" :id="'asso-' + selectedAssociation.id"
-        :name="selectedAssociation.name" :title="selectedAssociation.name" icon="icon-user-group" :active="true" />
+      <NcAppNavigationItem
+        id="associations"
+        name="Associations"
+        :title="t('dtcassociations', 'Associations')"
+        icon="icon-category-organization"
+        :active="!selectedAssociation"
+        @click="deselectAssociation" 
+      />
+      <NcAppNavigationItem
+        v-if="selectedAssociation"
+        :id="'asso-' + selectedAssociation.id"
+        :name="selectedAssociation.name"
+        :title="selectedAssociation.name"
+        icon="icon-user-group"
+        :active="true"
+      />
     </NcAppNavigation>
 
     <NcAppContent>
@@ -18,8 +30,8 @@
 
       <div v-if="!selectedAssociation" class="dtc-container">
         <div class="header-title-row">
-          <h2 class="app-title no-margin">{{ t('dtcassociations', 'Gestion Associations') }}</h2>
-          <span v-if="!loading && associations.length > 0" class="association-counter">
+        <h2 class="app-title no-margin">{{ t('dtcassociations', 'Gestion Associations') }}</h2>
+        <span v-if="!loading && associations.length > 0" class="association-counter">
             {{ associations.length }} {{ associations.length > 1 ? t('dtcassociations', 'associations présentes') :
               t('dtcassociations', 'association présente') }}
           </span>
@@ -50,7 +62,7 @@
         <div v-if="loading" class="icon-loading"></div>
         <ul v-else class="association-list">
           <li v-for="assoc in associations" :key="assoc.id" class="association-item clickable"
-            @click="selectAssociation(assoc)">
+          @click="selectAssociation(assoc)">
             <span class="icon-category-organization icon-white"></span>
             <div class="info">
               <div class="name-container">
@@ -68,11 +80,11 @@
             </div>
             <NcActions :primary="true" menu-name="Actions" @click.stop>
               <NcActionButton class="btn-orange" @click.stop="openRenameModal(assoc)" icon="icon-rename"
-                :close-after-click="true">
+              :close-after-click="true">
                 {{ t('dtcassociations', 'Renommer l\'association') }}
               </NcActionButton>
-              <NcActionButton v-if="canDelete" @click.stop="openDeleteModal(assoc)" icon="icon-delete"
-                :close-after-click="true">
+              <NcActionButton v-if="canDelete" @click.stop="openDeleteModal(assoc)" icon="icon-delete" 
+              :close-after-click="true">
                 {{ t('dtcassociations', 'Supprimer l\'association') }}
               </NcActionButton>
             </NcActions>
@@ -84,7 +96,7 @@
       </div>
       <div v-else class="dtc-container">
         <div class="header-actions">
-          <NcButton @click="selectedAssociation = null" type="tertiary" icon="icon-arrow-left-active">
+           <NcButton @click="deselectAssociation" type="tertiary" icon="icon-arrow-left-active">
             {{ t('dtcassociations', 'Retour') }}
           </NcButton>
 
@@ -146,14 +158,14 @@
             <div class="info edit-mode" v-else>
               <div class="user">
                 <span class="name" :title="member.user_id">{{ member.display_name || member.user_id }}</span>
-                <select v-model="editingMemberRole" class="dtc-select-small" @click.stop>
-                  <option value="president">Président / Vice-Président</option>
+              <select v-model="editingMemberRole" class="dtc-select-small" @click.stop>
+                <option value="president">Président / Vice-Président</option>
                   <option value="treasurer">Trésorier / Vice-Trésorier</option>
                   <option value="secretary">Secrétaire / Vice-Secrétaire</option>
-                  <option value="teacher">Enseignant</option>
-                  <option v-if="canManage" value="invite">Invité</option>
-                  <option v-if="canDelete" value="admin_iut">Admin IUT</option>
-                </select>
+                <option value="teacher">Enseignant</option>
+                <option v-if="canManage" value="invite">Invité</option>
+                <option v-if="canDelete" value="admin_iut">Admin IUT</option>
+              </select>
               </div>
               <div class="actions">
                 <NcButton type="primary" class="btn-orange" @click.stop="saveMemberRole(member)" icon="icon-checkmark">
@@ -165,7 +177,7 @@
             </div>
             <NcActions :primary="true" menu-name="Actions" v-if="editingMemberId !== member.user_id">
               <NcActionButton
-                v-if="!(member.user_id === currentUserId && (member.role === 'president' || member.role === 'admin_iut'))"
+                v-if="!(member.user_id === currentUserId && (member.role === 'president' || member.role === 'admin_iut'))" 
                 @click="startEditMember(member)" icon="icon-rename" :close-after-click="true">
                 {{ t('dtcassociations', 'Modifier le rôle') }}
               </NcActionButton>
@@ -186,7 +198,7 @@
         <div class="modal-content">
           <p><strong>Attention :</strong> Vous êtes sur le point de supprimer l'association <em>{{
             associationToDelete?.name
-              }}</em>.</p>
+            }}</em>.</p>
           <p class="warning-text">Cette action est irréversible.</p>
         </div>
         <div class="modal-footer-custom">
@@ -194,6 +206,7 @@
           <NcButton @click="confirmDeleteAssociation" type="error">Confirmer la suppression</NcButton>
         </div>
       </NcModal>
+
       <NcModal v-if="showRenameModal" @close="closeRenameModal" title="Renommer l'association" size="small">
         <div class="modal-content">
           <p>Entrez le nouveau nom pour l'association :</p>
@@ -217,6 +230,7 @@
           <NcButton @click="confirmRenameAssociation" type="primary" class="btn-orange">Valider le renommage</NcButton>
         </div>
       </NcModal>
+
       <NcModal v-if="showRemoveMemberModal" @close="closeRemoveMemberModal" title="Retirer un membre" size="small">
         <div class="modal-content">
           <p>Voulez-vous vraiment retirer <strong>{{ memberToRemove?.display_name || memberToRemove?.user_id }}</strong>
@@ -229,7 +243,6 @@
           <NcButton @click="confirmRemoveMember" type="error">Supprimer le membre</NcButton>
         </div>
       </NcModal>
-
     </NcAppContent>
   </NcContent>
 </template>

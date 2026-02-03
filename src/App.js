@@ -60,18 +60,79 @@ export default {
       notificationTimeout: null,
     };
   },
-  mounted() {
+
+  async mounted() {
     if (window.OC && window.OC.getCurrentUser) {
       this.currentUserId = window.OC.getCurrentUser().uid;
     }
-    this.checkPermissions();
-    this.fetchAssociations();
+
+    window.addEventListener("popstate", this.handlePopState);
+
+    await this.checkPermissions();
+    await this.fetchAssociations();
+
+    const urlParts = window.location.pathname.split("/");
+    let lastPart = urlParts[urlParts.length - 1];
+
+    if (lastPart === "" && urlParts.length > 1) {
+      lastPart = urlParts[urlParts.length - 2];
+    }
+
+    if (lastPart && lastPart !== "dtcassociations") {
+      const decodedName = decodeURIComponent(lastPart);
+
+      // Recherche améliorée : Code, Nom, Slug du nom, ou ID
+      const found =
+        this.associations.find((a) => a.code === lastPart) ||
+        this.associations.find((a) => a.name === decodedName) ||
+        this.associations.find((a) => this.slugify(a.name) === lastPart) ||
+        (!isNaN(lastPart)
+          ? this.associations.find((a) => a.id === parseInt(lastPart))
+          : null);
+
+      if (found) {
+        this.selectAssociation(found, false);
+      }
+    }
+
     try {
       if (window.OC && window.OC.isUserAdmin)
         this.isAdmin = window.OC.isUserAdmin();
     } catch (e) {}
   },
+
+  beforeDestroy() {
+    window.removeEventListener("popstate", this.handlePopState);
+  },
+
   methods: {
+    slugify(text) {
+      return text
+        .toString()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "_")
+        .replace(/[^\w_]+/g, "")
+        .replace(/__+/g, "_")
+        .replace(/^_+/, "")
+        .replace(/_+$/, "");
+    },
+
+    handlePopState(event) {
+      if (event.state && event.state.assocId) {
+        const found = this.associations.find(
+          (a) => a.id === event.state.assocId,
+        );
+        if (found) {
+          this.selectedAssociation = found;
+          this.fetchMembers();
+        }
+      } else {
+        this.selectedAssociation = null;
+      }
+    },
+
     showNotification(message, type = "error") {
       if (this.notificationTimeout) clearTimeout(this.notificationTimeout);
       this.notification = { message, type };
@@ -91,7 +152,7 @@ export default {
         );
         this.canDelete = response.data.canDelete;
         this.canManage = response.data.canManage;
-      } catch {
+      } catch (e) {
         this.canDelete = false;
         this.canManage = false;
       }
@@ -124,7 +185,8 @@ export default {
 
       this.loading = true;
       try {
-        const code = this.newAssocName.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const code = this.slugify(this.newAssocName);
+
         await axios.post(
           generateUrl("/apps/dtcassociations/api/1.0/associations"),
           { name: this.newAssocName, code: code },
@@ -210,8 +272,8 @@ export default {
 
       const id = this.associationToRename.id;
       const newName = this.renameInput;
+      this.showRenameModal = false;
       this.loading = true;
-
       try {
         await axios.put(
           generateUrl(`/apps/dtcassociations/api/1.0/associations/${id}`),
@@ -220,8 +282,12 @@ export default {
         await this.fetchAssociations();
         if (this.selectedAssociation?.id === id) {
           this.selectedAssociation.name = newName;
+
+          const newUrl = generateUrl(
+            "/apps/dtcassociations/" + this.slugify(newName),
+          );
+          window.history.replaceState({ assocId: id }, "", newUrl);
         }
-        this.showRenameModal = false;
         this.showNotification(
           t("dtcassociations", "Association renommée avec succès"),
           "success",
@@ -236,9 +302,23 @@ export default {
         this.loading = false;
       }
     },
-    selectAssociation(assoc) {
+
+    selectAssociation(assoc, pushState = true) {
       this.selectedAssociation = assoc;
       this.fetchMembers();
+
+      if (pushState) {
+        const newUrl = generateUrl(
+          "/apps/dtcassociations/" + this.slugify(assoc.name),
+        );
+        window.history.pushState({ assocId: assoc.id }, "", newUrl);
+      }
+    },
+
+    deselectAssociation() {
+      this.selectedAssociation = null;
+      const newUrl = generateUrl("/apps/dtcassociations/");
+      window.history.pushState({}, "", newUrl);
     },
     async fetchMembers() {
       if (!this.selectedAssociation) return;
@@ -283,11 +363,7 @@ export default {
     },
     async addMember() {
       if (!this.selectedUser) return;
-      await this.updateMemberRoleCall(
-        this.selectedUser.id,
-        this.newMemberRole,
-        true,
-      );
+      await this.updateMemberRoleCall(this.selectedUser.id, this.newMemberRole);
       this.selectedUser = null;
     },
     startEditMember(member) {
@@ -299,16 +375,14 @@ export default {
     },
     async saveMemberRole(member) {
       if (this.editingMemberRole !== member.role) {
-        await this.updateMemberRoleCall(
-          member.user_id,
-          this.editingMemberRole,
-          false,
-        );
+        await this.updateMemberRoleCall(member.user_id, this.editingMemberRole);
       }
       this.cancelEditMember();
     },
-    async updateMemberRoleCall(userId, role, isAdd) {
+    async updateMemberRoleCall(userId, role) {
       this.membersLoading = true;
+      const isAdd = !this.members.some((m) => m.user_id === userId);
+
       try {
         await axios.post(
           generateUrl(
@@ -390,7 +464,7 @@ export default {
       return Math.min(percent, 100).toFixed(1);
     },
     formatQuota(quota) {
-      if (quota < 0) return this.t("dtcassociations", "Illimité");
+      if (quota < 0) return t("dtcassociations", "Illimité");
       return this.formatSize(quota);
     },
     translateRole(role) {

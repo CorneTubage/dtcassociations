@@ -2,6 +2,7 @@
 return [
     'routes' => [
         ['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
+        ['name' => 'page#detail', 'url' => '/{id}', 'verb' => 'GET'],
 
         ['name' => 'api#getAssociations', 'url' => '/api/1.0/associations', 'verb' => 'GET'],
         ['name' => 'api#createAssociation', 'url' => '/api/1.0/associations', 'verb' => 'POST'],
