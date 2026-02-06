@@ -86,11 +86,9 @@ class GroupFolderService
         return $stats;
     }
 
-    // --- GROUPES ---
-
     public function ensureGlobalGroupsExist(): void
     {
-        $groups = ['president', 'treasurer', 'secretary', 'teacher', 'admin_iut', 'invite'];
+        $groups = ['president', 'tresorier', 'secretaire', 'enseignent', 'admin_iut', 'invite'];
         foreach ($groups as $gid) {
             if (!$this->groupManager->groupExists($gid)) {
                 $this->groupManager->createGroup($gid);
@@ -100,7 +98,7 @@ class GroupFolderService
 
     public function updateUserGlobalGroup(string $userId, string $groupName, bool $shouldBeIn): void
     {
-        if (!in_array($groupName, ['president', 'treasurer', 'secretary', 'teacher', 'admin_iut', 'invite'])) {
+        if (!in_array($groupName, ['president', 'tresorier', 'secretaire', 'enseignent', 'admin_iut', 'invite'])) {
             return;
         }
 
@@ -113,7 +111,6 @@ class GroupFolderService
 
             $isIn = $group->inGroup($user);
 
-            // BLINDAGE CIRCLES
             if ($shouldBeIn && !$isIn) {
                 try {
                     $group->addUser($user);
@@ -131,8 +128,6 @@ class GroupFolderService
             $this->log("Global group error: " . $e->getMessage(), 'error');
         }
     }
-
-    // --- STRUCTURE ---
 
     public function ensureAssociationStructure(string $assoName): int
     {
@@ -314,7 +309,6 @@ class GroupFolderService
         try {
             $group = $this->groupManager->get($groupName);
             $user = $this->userManager->get($userId);
-            // BLINDAGE CIRCLES
             if ($group && $user && !$group->inGroup($user)) {
                 try {
                     $group->addUser($user);
@@ -330,7 +324,6 @@ class GroupFolderService
         try {
             $group = $this->groupManager->get($groupName);
             $user = $this->userManager->get($userId);
-            // BLINDAGE CIRCLES
             if ($group && $user && $group->inGroup($user)) {
                 try {
                     $group->removeUser($user);
