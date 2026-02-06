@@ -222,25 +222,29 @@ class GroupFolderService
 
             $officiel = $mountPoint->get('officiel');
 
-            if (!$officiel->nodeExists('Autres')) $officiel->newFolder('Autres');
+            // 4. Autres
+            if (!$officiel->nodeExists('4. Autres')) $officiel->newFolder('4. Autres');
 
-            if (!$officiel->nodeExists('Papiers officiels de l\'association')) {
-                $officiel->newFolder('Papiers officiels de l\'association');
+            // 1. Papiers officiels de l'association
+            if (!$officiel->nodeExists('1. Papiers officiels de l\'association')) {
+                $officiel->newFolder('1. Papiers officiels de l\'association');
             }
-            $papiers = $officiel->get('Papiers officiels de l\'association');
-            foreach (['Documents Préfecture', 'Statuts', 'Fiche Objectif'] as $sub) {
+            $papiers = $officiel->get('1. Papiers officiels de l\'association');
+            foreach (['1.1 Documents Préfecture', '1.2 Statuts', '1.3 Fiche Objectif'] as $sub) {
                 if (!$papiers->nodeExists($sub)) $papiers->newFolder($sub);
             }
 
-            if (!$officiel->nodeExists('Comptes')) $officiel->newFolder('Comptes');
-            $comptes = $officiel->get('Comptes');
-            foreach (['RIB', 'Relevés de comptes mensuels', 'Notes de frais'] as $sub) {
+            // 2. Comptes
+            if (!$officiel->nodeExists('2. Comptes')) $officiel->newFolder('2. Comptes');
+            $comptes = $officiel->get('2. Comptes');
+            foreach (['2.1 RIB', '2.2 Relevés de comptes mensuels', '2.3 Notes de frais'] as $sub) {
                 if (!$comptes->nodeExists($sub)) $comptes->newFolder($sub);
             }
 
-            if (!$officiel->nodeExists('Rendus')) $officiel->newFolder('Rendus');
-            $rendus = $officiel->get('Rendus');
-            foreach (['Comptes rendus mensuels', 'Plan de gestion', 'Bilan mi-parcours', 'Rapport final', 'Vidéo collectif'] as $sub) {
+            // 3. Rendus
+            if (!$officiel->nodeExists('3. Rendus')) $officiel->newFolder('3. Rendus');
+            $rendus = $officiel->get('3. Rendus');
+            foreach (['3.1 Comptes rendus mensuels', '3.2 Plan de gestion', '3.3 Bilan mi-parcours', '3.4 Rapport final', '3.5 Vidéo collectif'] as $sub) {
                 if (!$rendus->nodeExists($sub)) $rendus->newFolder($sub);
             }
         } catch (\Throwable $e) {
