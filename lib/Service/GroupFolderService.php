@@ -414,37 +414,37 @@ class GroupFolderService
             $isReadOnlyRole = ($role === 'teacher' || $role === 'invite');
             $writePerms = $isReadOnlyRole ? Constants::PERMISSION_READ : Constants::PERMISSION_ALL;
 
-            if ($officiel->nodeExists('Autres')) {
-                $this->setRule($rm, $mapping, $officiel->get('Autres')->getId(), $writePerms);
+            if ($officiel->nodeExists('4. Autres')) {
+                $this->setRule($rm, $mapping, $officiel->get('4. Autres')->getId(), $writePerms);
             }
 
-            if ($officiel->nodeExists('Papiers officiels de l\'association')) {
-                $papiers = $officiel->get('Papiers officiels de l\'association');
+            if ($officiel->nodeExists('1. Papiers officiels de l\'association')) {
+                $papiers = $officiel->get('1. Papiers officiels de l\'association');
                 $this->setRule($rm, $mapping, $papiers->getId(), Constants::PERMISSION_READ);
 
-                foreach (['Documents Préfecture', 'Statuts', 'Fiche Objectif'] as $sub) {
+                foreach (['1.1 Documents Préfecture', '1.2 Statuts', '1.3 Fiche Objectif'] as $sub) {
                     if ($papiers->nodeExists($sub)) {
                         $this->setRule($rm, $mapping, $papiers->get($sub)->getId(), $writePerms);
                     }
                 }
             }
 
-            if ($officiel->nodeExists('Comptes')) {
-                $comptes = $officiel->get('Comptes');
+            if ($officiel->nodeExists('2. Comptes')) {
+                $comptes = $officiel->get('2. Comptes');
                 $this->setRule($rm, $mapping, $comptes->getId(), $writePerms);
 
-                foreach (['RIB', 'Relevés de comptes mensuels', 'Notes de frais'] as $sub) {
+                foreach (['2.1 RIB', '2.2 Relevés de comptes mensuels', '2.3 Notes de frais'] as $sub) {
                     if ($comptes->nodeExists($sub)) {
                         $this->setRule($rm, $mapping, $comptes->get($sub)->getId(), $writePerms);
                     }
                 }
             }
 
-            if ($officiel->nodeExists('Rendus')) {
-                $rendus = $officiel->get('Rendus');
+            if ($officiel->nodeExists('3. Rendus')) {
+                $rendus = $officiel->get('3. Rendus');
                 $this->setRule($rm, $mapping, $rendus->getId(), Constants::PERMISSION_READ);
 
-                foreach (['Comptes rendus mensuels', 'Plan de gestion', 'Bilan mi-parcours', 'Rapport final', 'Vidéo collectif'] as $sub) {
+                foreach (['3.1 Comptes rendus mensuels', '3.2 Plan de gestion', '3.3 Bilan mi-parcours', '3.4 Rapport final', '3.5 Vidéo collectif'] as $sub) {
                     if ($rendus->nodeExists($sub)) {
                         $this->setRule($rm, $mapping, $rendus->get($sub)->getId(), $writePerms);
                     }
