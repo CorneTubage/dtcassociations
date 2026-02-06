@@ -406,9 +406,10 @@ class GroupFolderService
 
         if ($rootNode->nodeExists('archive')) {
             $archiveId = $rootNode->get('archive')->getId();
-            $archivePerms = Constants::PERMISSION_READ;
             if ($role === 'president' || $role === 'admin_iut') {
                 $archivePerms = Constants::PERMISSION_ALL & ~Constants::PERMISSION_DELETE;
+            } else {
+                $archivePerms = Constants::PERMISSION_READ;
             }
             $this->setRule($rm, $mapping, $archiveId, $archivePerms);
         }
