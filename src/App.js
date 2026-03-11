@@ -58,7 +58,92 @@ export default {
         type: "error",
       },
       notificationTimeout: null,
+
+      searchQuery: '',
+      sortOption: 'name_asc'
     };
+  },
+
+  computed: {
+    filteredAndSortedAssociations() {
+      let result = [...this.associations];
+
+      // 1. Masquer les associations archivées pour les NON-admins
+      if (!this.canManage) {
+        result = result.filter(assoc => !assoc.name.toLowerCase().includes('archive'));
+      }
+
+      // 2. Filtrage par la barre de recherche
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase();
+        result = result.filter(assoc => 
+          assoc.name.toLowerCase().includes(query)
+        );
+      }
+
+      // 3. Si l'admin a sélectionné le filtre "Archives uniquement"
+      if (this.canManage && this.sortOption === 'archived') {
+        result = result.filter(assoc => assoc.name.toLowerCase().includes('archive'));
+      }
+
+      // 4. Tri avec maintien des archives en bas
+      result.sort((a, b) => {
+        const aArchived = a.name.toLowerCase().includes('archive');
+        const bArchived = b.name.toLowerCase().includes('archive');
+
+        // Force les archives TOUJOURS à la fin (sauf si on les compare entre elles)
+        if (aArchived && !bArchived) return 1;
+        if (!aArchived && bArchived) return -1;
+
+        // Tri classique pour le reste
+        switch (this.sortOption) {
+          case 'name_asc':
+            return a.name.localeCompare(b.name);
+          case 'name_desc':
+            return b.name.localeCompare(a.name);
+          case 'members_desc':
+            return (b.member_count || 0) - (a.member_count || 0);
+          case 'members_asc':
+            return (a.member_count || 0) - (b.member_count || 0);
+          case 'quota_desc':
+            return (b.usage || 0) - (a.usage || 0);
+          case 'archived': 
+            // S'il n'y a que des archives affichées, on les trie par nom (A-Z)
+            return a.name.localeCompare(b.name);
+          default:
+            return 0;
+        }
+      });
+
+      return result;
+    },
+    sortedMembers() {
+      // On définit l'ordre d'importance (le plus petit chiffre apparaît en premier)
+      const roleOrder = {
+        'president': 1,
+        'treasurer': 2,
+        'secretary': 3,
+        'teacher': 4,
+        'admin_iut': 5,
+        'invite': 6
+      };
+
+      // On clone le tableau pour ne pas modifier l'original directement
+      return [...this.members].sort((a, b) => {
+        const orderA = roleOrder[a.role] || 99; // 99 par défaut si le rôle est inconnu
+        const orderB = roleOrder[b.role] || 99;
+
+        // Si les rôles sont différents, on trie par importance
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        
+        // Si les rôles sont identiques, on trie par ordre alphabétique du nom
+        const nameA = (a.display_name || a.user_id || '').toLowerCase();
+        const nameB = (b.display_name || b.user_id || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+    }
   },
 
   async mounted() {

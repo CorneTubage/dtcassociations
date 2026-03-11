@@ -30,12 +30,12 @@
 
       <div v-if="!selectedAssociation" class="dtc-container">
         <div class="header-title-row">
-        <h2 class="app-title no-margin">{{ t('dtcassociations', 'Gestion Associations') }}</h2>
-        <span v-if="!loading && associations.length > 0" class="association-counter">
-            {{ associations.length }} {{ associations.length > 1 ? t('dtcassociations', 'associations présentes') :
-              t('dtcassociations', 'association présente') }}
+          <h2 class="app-title no-margin">{{ t('dtcassociations', 'Gestion Associations') }}</h2>
+          <span v-if="!loading && associations.length > 0 && canManage" class="association-counter">
+            {{ associations.length }} {{ associations.length > 1 ? t('dtcassociations', 'associations présentes') : t('dtcassociations', 'association présente') }}
           </span>
         </div>
+        
         <div v-if="canManage" class="add-form-container">
           <div class="add-form-association">
             <label for="newAssocName">{{ t('dtcassociations', 'Création d\'une association') }}</label>
@@ -59,10 +59,34 @@
             }}
           </p>
         </div>
+
+        <div v-if="!loading && associations.length > 0 && canManage" class="filter-controls">
+          <div class="search-container">
+            <span class="icon-search icon-white"></span>
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              class="dtc-input search-input"
+              :placeholder="t('dtcassociations', 'Rechercher une association...')" 
+            />
+          </div>
+          <select v-model="sortOption" class="dtc-select sort-select">
+            <option value="name_asc">{{ t('dtcassociations', 'Nom (A-Z)') }}</option>
+            <option value="name_desc">{{ t('dtcassociations', 'Nom (Z-A)') }}</option>
+            <option value="members_desc">{{ t('dtcassociations', 'Plus de membres') }}</option>
+            <option value="members_asc">{{ t('dtcassociations', 'Moins de membres') }}</option>
+            <option value="quota_desc">{{ t('dtcassociations', 'Plus d\'espace utilisé') }}</option>
+            <option v-if="canManage" value="archived">{{ t('dtcassociations', 'Archives uniquement') }}</option>
+          </select>
+        </div>
+
         <div v-if="loading" class="icon-loading"></div>
+        
         <ul v-else class="association-list">
-          <li v-for="assoc in associations" :key="assoc.id" class="association-item clickable"
-          @click="selectAssociation(assoc)">
+          <li v-for="assoc in filteredAndSortedAssociations" :key="assoc.id" 
+            class="association-item clickable" 
+            :class="{ 'archived-item': assoc.name.toLowerCase().includes('archive') }"
+            @click="selectAssociation(assoc)">
             <span class="icon-category-organization icon-white asso"></span>
             <div class="info asso">
               <div class="name-container">
@@ -89,11 +113,13 @@
               </NcActionButton>
             </NcActions>
           </li>
-          <li v-if="associations.length === 0" class="empty-state">
-            {{ t('dtcassociations', 'Aucune association trouvée.') }}
+          
+          <li v-if="filteredAndSortedAssociations.length === 0" class="empty-state">
+            {{ searchQuery ? t('dtcassociations', 'Aucune association ne correspond à votre recherche.') : t('dtcassociations', 'Aucune association trouvée.') }}
           </li>
         </ul>
       </div>
+
       <div v-else class="dtc-container">
         <div class="header-actions">
            <NcButton @click="deselectAssociation" type="tertiary" icon="icon-arrow-left-active">
@@ -149,7 +175,7 @@
         </div>
         <div v-if="membersLoading" class="icon-loading"></div>
         <ul v-else class="association-list">
-          <li v-for="member in members" :key="member.id" class="association-item">
+          <li v-for="member in sortedMembers" :key="member.id" class="association-item">
             <span class="icon-user icon-white"></span>
             <div class="info" v-if="editingMemberId !== member.user_id">
               <span class="name" :title="member.user_id">{{ member.display_name || member.user_id }}</span>
@@ -189,11 +215,12 @@
               </NcActionButton>
             </NcActions>
           </li>
-          <li v-if="members.length === 0" class="empty-state">
+          <li v-if="sortedMembers.length === 0" class="empty-state">
             {{ t('dtcassociations', 'Aucun membre dans cette association.') }}
           </li>
         </ul>
       </div>
+      
       <NcModal v-if="showDeleteModal" @close="closeDeleteModal" title="Suppression définitive" size="small">
         <div class="modal-content">
           <p><strong>Attention :</strong> Vous êtes sur le point de supprimer l'association <em>{{
